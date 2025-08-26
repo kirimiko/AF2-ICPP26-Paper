@@ -1,1 +1,4 @@
 \section{Methodology}
+\subsection{Matrix Format Design}
+% 对于int8与fp16精度的OPA指令，72F要求输入寄存器内的向量是交织的。如果在寄存器中将标准row-major的矩阵进行重排，需要插入大量的寄存器操作指令。在72F上，单条数据排布指令与单条OPA指令的延迟类似，且难以与OPA指令重叠。这些指令会极大程度上拖慢OPA指令的执行速度。为了避免这种情况，我们设计了一个新的矩阵数据格式，称为Interleaved Matrix Format (IMF)。IMF将矩阵的行元素交织存储，使得每个向量寄存器中的元素可以直接用于OPA指令，而无需额外的重排操作。通过将GEMM的kernel设计为可以接收与输出IMF格式，我们可以避免大量的数据排布开销，而仅仅需要在算子入口处进行一次数据格式转换。
+\subsection{Kernel Design}
