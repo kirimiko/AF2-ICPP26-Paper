@@ -19,6 +19,12 @@ The Structure Module takes the processed representations from the Evoformer and 
 Finally, AlphaFold2 relies on iterative refinement, where the Evoformer and Structure Module are applied multiple times to progressively improve prediction accuracy. This iterative nature further amplifies the computational demands of the model.
 
 From a systems perspective, AlphaFold2 presents several unique challenges compared to conventional vision or language models. First, its extensive use of attention across long MSAs leads to quadratic computational complexity with respect to sequence length. Second, the triangular updates and geometric transformations require substantial matrix multiplications interleaved with non-standard operations, making the workload heterogeneous and difficult to optimize. Third, the model’s memory footprint is significant, as it maintains multiple high-dimensional feature tensors across iterations. These characteristics make AlphaFold2 particularly demanding for hardware platforms and motivate careful exploration of architectural accelerators such as matrix units on CPUs.
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fastfold-model.png}
+    \caption{AlphaFold2 Model Architecture}
+    \label{fig:af2model}
+\end{figure*}
 
 \subsection{Model Quantization}
 Model quantization is a widely adopted technique in deep learning that reduces the precision of model parameters and intermediate activations to improve inference efficiency. Instead of relying solely on high-precision floating-point formats such as FP32 or FP16, quantization typically converts data into lower-bit integer formats (e.g., INT8). This reduction not only decreases the memory footprint and data transfer volume but also allows hardware accelerators, including CPU matrix units, to perform more operations per cycle due to higher arithmetic density.

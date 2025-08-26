@@ -1,0 +1,14 @@
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.gz
+*.zip
+*.fls
+*.fdb_latexmk
+main.pdf
+*.drawio.bkp
+main.synctex(busy)
+*.cut
+.vscode
