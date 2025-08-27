@@ -22,3 +22,12 @@ In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off 
 In AlphaFold2, GEMMs typically involve small $K$ dimensions. If the GEMM were blocked along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
 Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-blocking, memory locality is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2’s typical workloads.
+
+\subsection{Quantization Strategy}
+In our implementation, we adopt a post-training quantization approach. Static quantization is difficult to apply effectively in AlphaFold2, since the activation values exhibit significant variation across different input sequences. As a result, a dynamic strategy is more suitable.
+
+Through experimentation, we observed that smoothing is not strictly necessary to achieve satisfactory accuracy. While applying a smoothing technique provides a marginal improvement, direct mapping quantization achieves comparable accuracy with lower complexity. Therefore, we adopt a direct mapping scheme.
+
+To further reduce the memory overhead introduced by quantization, we integrate the scale computation into the GEMM pipeline. Specifically, during the write-back stage of the current GEMM, we accumulate the maximum value of the output. This maximum value is then used as the scale for the quantization of the subsequent GEMM. By coupling scale estimation with write-back, we avoid additional memory traversals and effectively minimize quantization overhead.
+
+\subsection{Multiple Processes on Multi-NUMA Nodes}
