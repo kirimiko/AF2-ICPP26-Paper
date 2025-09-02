@@ -121,6 +121,12 @@ These results confirm that our mixed-precision strategy preserves the accuracy o
 
 
 \subsection{Scalability Evaluation}
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/a.pdf}
+    \caption{Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.} 
+    \label{fig:tmscore}
+\end{figure*}
 To further assess the scalability of our optimized CPU implementation, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying both the input sequence length and the numerical precision (FP16, INT8). We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
 
 Figure [Z] presents the scalability curves. Across all sequence lengths, we observe that the inference time decreases nearly linearly with the number of NUMA nodes, indicating good parallel efficiency of our implementation. 
