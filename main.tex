@@ -1,13 +1,66 @@
-% The first command in your LaTeX source must be the \documentclass command.
-\documentclass[sigplan,10pt,screen,nonacm]{acmart}
+%% For double-blind review submission, w/o CCS and ACM Reference (max submission space)
+\documentclass[sigplan,10pt]{acmart}
 \settopmatter{printfolios=true,printccs=false,printacmref=false}
-% \usepackage{CJKutf8}
-%\acmSubmissionID{801}
-\usepackage{amsmath,amsfonts}
-% \usepackage{algorithm}
-% \usepackage{algorithmicx,algpseudocode}
+%% For double-blind review submission, w/ CCS and ACM Reference
+%\documentclass[sigplan,review,anonymous]{acmart}\settopmatter{printfolios=true}
+%% For single-blind review submission, w/o CCS and ACM Reference (max submission space)
+%\documentclass[sigplan,review]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
+%% For single-blind review submission, w/ CCS and ACM Reference
+%\documentclass[sigplan,review]{acmart}\settopmatter{printfolios=true}
+%% For final camera-ready submission, w/ required CCS and ACM Reference
+%\documentclass[sigplan]{acmart}\settopmatter{}
+
+
+%% Conference information
+%% Supplied to authors by publisher for camera-ready submission;
+%% use defaults for review submission.
+\acmConference[PPoPP'26]{ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming}{January 31--February 04, 2026}{Sydney, Australia}
+\acmYear{2026}
+\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
+\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+
+%% Copyright information
+%% Supplied to authors (based on authors' rights management selection;
+%% see authors.acm.org) by publisher for camera-ready submission;
+%% use 'none' for review submission.
+\setcopyright{none}
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\copyrightyear{2018}           %% If different from \acmYear
+
+%% Bibliography style
+\bibliographystyle{ACM-Reference-Format}
+%% Citation style
+%\citestyle{acmauthoryear}  %% For author/year citations
+%\citestyle{acmnumeric}     %% For numeric citations
+%\setcitestyle{nosort}      %% With 'acmnumeric', to disable automatic
+                            %% sorting of references within a single citation;
+                            %% e.g., \cite{Smith99,Carpenter05,Baker12}
+                            %% rendered as [14,5,2] rather than [2,5,14].
+%\setcitesyle{nocompress}   %% With 'acmnumeric', to disable automatic
+                            %% compression of sequential references within a
+                            %% single citation;
+                            %% e.g., \cite{Baker12,Baker14,Baker16}
+                            %% rendered as [2,3,4] rather than [2-4].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Note: Authors migrating a paper from traditional SIGPLAN
+%% proceedings format to PACMPL format must update the
+%% '\documentclass' and topmatter commands above; see
+%% 'acmart-pacmpl-template.tex'.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% Some recommended packages.
+\usepackage{booktabs}   %% For formal tables:
+                        %% http://ctan.org/pkg/booktabs
+\usepackage{subcaption} %% For complex figures with subfigures/subcaptions
+                        %% http://ctan.org/pkg/subcaption
+
 \usepackage[ruled,linesnumbered]{algorithm2e}
-\usepackage{subfig}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{pifont}
@@ -36,20 +89,6 @@
 \let\orig@lstnumber=\thelstnumber
 \newcommand\lstsetnumber[1]{\gdef\thelstnumber{#1}}
 \newcommand\lstresetnumber{\global\let\thelstnumber=\orig@lstnumber}
-%\lstset{
-%	basicstyle          =   \footnotesize\sffamily,          % 基本代码风格
-%	keywordstyle        =   \bfseries,          % 关键字风格
-%	commentstyle        =   \rmfamily\itshape,  % 注释的风格,斜体
-%	stringstyle         =   \ttfamily,  % 字符串风格
-%	numbers             =   left,   % 行号的位置在左边
-%	showspaces          =   false,  % 是否显示空格,显示了有点乱,所以不现实了
-%	numberstyle         =   \ttfamily,    % 行号的样式,小五号,tt等宽字体
-%	showstringspaces    =   false,
-%	captionpos          =   t,      % 这段代码的名字所呈现的位置,t指的是top上面
-%	frame               =   lrtb,   % 显示边框
-%	breaklines, %自动换行
-%	columns=flexible, %不随便添加空格,只在已经有空格的地方添加空格,
-%}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -93,179 +132,99 @@
 }
 
 \lstset{style=mystyle}
-\newcommand{\yf}[1]{{\color{red} YF: #1}}
+% \newcommand{\yf}[1]{{\color{red} YF: #1}}
 
-%\usepackage{minted}
-
-%
-% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-
-%\settopmatter{printfolios=true,printacmref=false} % Removes citation information below abstract
-%\setcopyright{none}
-%\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
-% Rights management information. 
-% This information is sent to you when you complete the rights form.
-% These commands have SAMPLE values in them; it is your responsibility as an author to replace
-% the commands and values with those provided to you when you complete the rights form.
-%
-% These commands are for a PROCEEDINGS abstract or paper.
-%\copyrightyear{2018}
-%\acmYear{2018}
-%\setcopyright{acmlicensed}
-% \acmConference[PPoPP'26]{ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming}{January 31--February 04, 2026}{Sydney, Australia}
-% \acmYear{2026}
-% \acmConference[]{}{}
-\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-% \startPage{1}
-\settopmatter{printacmref=false}
-
-\setcopyright{none}
-%
-% These commands are for a JOURNAL article.
-%\setcopyright{acmcopyright}
-%\acmJournal{TOG}
-%\acmYear{2018}\acmVolume{37}\acmNumber{4}\acmArticle{111}\acmMonth{8}
-%\acmDOI{10.1145/1122445.1122456}
-
-%
-% Submission ID. 
-% Use this when submitting an article to a sponsored event. You'll receive a unique submission ID from the organizers
-% of the event, and this ID should be used as the parameter to this command.
-%\acmSubmissionID{123-A56-BU3}
-
-%
-% The majority of ACM publications use numbered citations and references. If you are preparing content for an event
-% sponsored by ACM SIGGRAPH, you must use the "author year" style of citations and references. Uncommenting
-% the next command will enable that style.
-% \citestyle{acmauthoryear}
-%\hypersetup{draft}
-%
-% end of the preamble, start of the body of the document source.
 
 \begin{document}
-% \begin{CJK}{UTF8}{gbsn}
-\sloppy
-%
-% The "title" command has an optional parameter, allowing the author to define a "short title" to be used in page headers.
-%\title{Specializing Zero-Value Code via Profile-Guided and Dataflow-based Value Propagation Analysis}
-%\title{Profile-Guided and Control-Dataflow-based Zero-Value Code Specialization}
-\title[MatrixFold: Accelerating Mixed-Precision Alphafold Inference on CPU]{MatrixFold: Accelerating Mixed-Precision Alphafold Inference via Outer Product Unit on Manycore CPUs}
-%
-% The "author" command and its associated commands are used to define the authors and their affiliations.
-% Of note is the shared affiliation of the first two authors, and the "authornote" and "authornotemark" commands
-% used to denote shared contribution to the research.
-%\author{Ben Trovato}
-%\authornote{Both authors contributed equally to this research.}
-%\email{trovato@corporation.com}
-%\orcid{1234-5678-9012}
-%\author{G.K.M. Tobin}
-%\authornotemark[1]
-%\email{webmaster@marysville-ohio.com}
-%\affiliation{%
-%  \institution{Institute for Clarity in Documentation}
-%  \streetaddress{P.O. Box 1212}
-%  \city{Dublin}
-%  \state{Ohio}
-%  \postcode{43017-6221}
-%}
 
-%\author{}
-%\affiliation{\institution{} \country{}}
-%\email{}
 
-%
-% By default, the full list of authors will be used in the page headers. Often, this list is too long, and will overlap
-% other information printed in the page headers. This command allows the author to define a more concise list
-% of authors' names for this purpose.
-%\renewcommand{\shortauthors}{Trovato and Tobin, et al.}
-%\renewcommand{\shortauthors}{Shaokang Du, Kelun Lei, Xin You, Hailong Yang, Zhongzhi Luan and Depei Qian}
+%% Title information
+\title[MatrixFold: Accelerating Mixed-Precision Alphafold Inference on CPU]{MatrixFold: Accelerating Mixed-Precision Alphafold Inference via Outer Product Unit on Manycore CPUs}         %% [Short Title] is optional;
+                                        %% when present, will be used in
+                                        %% header instead of Full Title.
+%\titlenote{For simple use only}             %% \titlenote is optional;
+                                        %% can be repeated if necessary;
+                                        %% contents suppressed with 'anonymous'
+%\subtitle{Check the format}                     %% \subtitle is optional
+%\subtitlenote{Everything should just work}       %% \subtitlenote is optional;
+                                        %% can be repeated if necessary;
+                                        %% contents suppressed with 'anonymous'
 
-%
-% The abstract is a short summary of the work to be presented in the article.
+
+%% Author information
+%% Contents and number of authors suppressed with 'anonymous'.
+%% Each author should be introduced by \author, followed by
+%% \authornote (optional), \orcid (optional), \affiliation, and
+%% \email.
+%% An author may have multiple affiliations and/or emails; repeat the
+%% appropriate command.
+%% Many elements are not rendered, but should be provided for metadata
+%% extraction tools.
+
+\author{} %% fill in for the camera-ready version with the format commented out below
+%% Author with single affiliation.
+% \author{First1 Last1}
+% \authornote{with author1 note}          %% \authornote is optional;
+%                                         %% can be repeated if necessary
+% \orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+% \affiliation{
+%   \position{Position1}
+%   \department{Department1}              %% \department is recommended
+%   \institution{Institution1}            %% \institution is required
+%   \streetaddress{Street1 Address1}
+%   \city{City1}
+%   \state{State1}
+%   \postcode{Post-Code1}
+%   \country{Country1}                    %% \country is recommended
+% }
+% \email{first1.last1@inst1.edu}          %% \email is recommended
+
+% %% Author with two affiliations and emails.
+% \author{First2 Last2}
+% \authornote{with author2 note}          %% \authornote is optional;
+%                                         %% can be repeated if necessary
+% \orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+% \affiliation{
+%   \position{Position2a}
+%   \department{Department2a}             %% \department is recommended
+%   \institution{Institution2a}           %% \institution is required
+%   \streetaddress{Street2a Address2a}
+%   \city{City2a}
+%   \state{State2a}
+%   \postcode{Post-Code2a}
+%   \country{Country2a}                   %% \country is recommended
+% }
+% \email{first2.last2@inst2a.com}         %% \email is recommended
+% \affiliation{
+%   \position{Position2b}
+%   \department{Department2b}             %% \department is recommended
+%   \institution{Institution2b}           %% \institution is required
+%   \streetaddress{Street3b Address2b}
+%   \city{City2b}
+%   \state{State2b}
+%   \postcode{Post-Code2b}
+%   \country{Country2b}                   %% \country is recommended
+% }
+% \email{first2.last2@inst2b.org}         %% \email is recommended
+
+
+%% Remove these two lines for the camera-ready version
 \fancyhead{}  % clears the header fields that trigger HotCRP format checker
-% \renewcommand\footnotetextcopyrightpermission[1]{} % removes the ACM copyright footnote
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes the ACM copyright footnote
 
-
-
+%% Abstract
+%% Note: \begin{abstract}...\end{abstract} environment must come
+%% before \maketitle command
 \begin{abstract}
 AlphaFold2 has achieved remarkable accuracy in protein structure prediction, yet its high computational and memory costs remain a significant barrier to large-scale deployment. While prior optimization efforts have been predominantly GPU-centric, the potential for CPU acceleration remains largely unexplored. This paper introduces MatrixFold, the first systematic study of quantized AlphaFold2 inference on a many-core CPU architecture. Targeting 72F processor with dedicated matrix units and on-package memory, we implement a series of computation and communication optimizations. These include highly optimized GEMM kernels, hardware-based communication mechanisms, and adaptive parallelism strategies to efficiently leverage the many-core resources. On CASP14 benchmarks, MatrixFold demonstrates high structural accuracy with TM-scores above 0.7. While its performance is comparable to GPU-based FastFold on short sequences, it shows a significant advantage on long sequences, achieving an inference speedup of 1.2$\times$ to 3.2$\times$ over FastFold on the NVIDIA A800 GPU.
 \end{abstract}
 
-% optimizing stencil computation on every hardware target manually becomes a heavy burden for programmers.
 
-% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
-% Please copy and paste the code instead of the example below.
-%
-%\begin{CCSXML}
-%<ccs2012>
-% <concept>
-%  <concept_id>10010520.10010553.10010562</concept_id>
-%  <concept_desc>Computer systems organization~Embedded systems</concept_desc>
-%  <concept_significance>500</concept_significance>
-% </concept>
-% <concept>
-%  <concept_id>10010520.10010575.10010755</concept_id>
-%  <concept_desc>Computer systems organization~Redundancy</concept_desc>
-%  <concept_significance>300</concept_significance>
-% </concept>
-% <concept>
-%  <concept_id>10010520.10010553.10010554</concept_id>
-%  <concept_desc>Computer systems organization~Robotics</concept_desc>
-%  <concept_significance>100</concept_significance>
-% </concept>
-% <concept>
-%  <concept_id>10003033.10003083.10003095</concept_id>
-%  <concept_desc>Networks~Network reliability</concept_desc>
-%  <concept_significance>100</concept_significance>
-% </concept>
-%</ccs2012>
-%\end{CCSXML}
-%
-%\ccsdesc[500]{Computer systems organization~Embedded systems}
-%\ccsdesc[300]{Computer systems organization~Redundancy}
-%\ccsdesc{Computer systems organization~Robotics}
-%\ccsdesc[100]{Networks~Network reliability}
-%\begin{CCSXML}
-%	<ccs2012>
-%	<concept>
-%	<concept_id>10002944.10011123.10011674</concept_id>
-%	<concept_desc>General and reference~Performance</concept_desc>
-%	<concept_significance>500</concept_significance>
-%	</concept>
-%	<concept>
-%	<concept_id>10011007.10011006.10011066</concept_id>
-%	<concept_desc>Software and its engineering~Development frameworks and environments</concept_desc>
-%	<concept_significance>500</concept_significance>
-%	</concept>
-%	</ccs2012>
-%\end{CCSXML}
-%
-%\ccsdesc[500]{General and reference~Performance}
-%\ccsdesc[500]{Software and its engineering~Development frameworks and environments}
-
-%
-% Keywords. The author(s) should pick words that accurately describe the work being
-% presented. Separate the keywords with commas.
-%\keywords{mixed-precision technique, dominance-shifting stencil computation, performance optimization, GPU}
-%\keywords{Selective Binary Rewriting, ARM, Function Interception}
-
-%
-% A "teaser" image appears between the author and affiliation information and the body 
-% of the document, and typically spans the page. 
-%\begin{teaserfigure}
-%  \includegraphics[width=\textwidth]{sampleteaser}
-%  \caption{Seattle Mariners at Spring Training, 2010.}
-%  \Description{Enjoying the baseball game from the third-base seats. Ichiro Suzuki preparing to bat.}
-%  \label{fig:teaser}
-%\end{teaserfigure}
-
-%
-% This command processes the author and affiliation and title information and builds
-% the first part of the formatted document.
+%% \maketitle
+%% Note: \maketitle command must come after title commands, author
+%% commands, abstract environment, Computing Classification System
+%% environment and commands, and keywords command.
 \maketitle
-%\pagestyle{plain} % removes running headers
 
 \input{introduction}
 \input{background}
@@ -277,25 +236,8 @@ AlphaFold2 has achieved remarkable accuracy in protein structure prediction, yet
 %\input{casestudy}
 \input{relatedwork}
 \input{conclusion}
-%\input{acknowledgement}
 
-%
-% The acknowledgments section is defined using the "acks" environment (and NOT an unnumbered section). This ensures
-% the proper identification of the section in the article metadata, and the consistent spelling of the heading.
-%\begin{acks}
-%To Robert, for the bagels and explaining CMYK and color spaces.
-%\end{acks}
-
-%
-% The next two lines define the bibliography style to be used, and the bibliography file.
-\bibliographystyle{ACM-Reference-Format}
+%% Bibliography
 \bibliography{ref}
 
-% \appendix
-% \input{appendix}
-
-% 
-% If your work has an appendix, this is the place to put it.
-% \end{CJK}
 \end{document}
-
