@@ -1,29 +1,48 @@
-\section{Methodology}
+\section{Optimizations}
 \subsection{Tensor Layout Optimization}
 % 对于int8与fp16精度的OPA指令，72F要求输入寄存器内的向量是交织的。如果在寄存器中将标准row-major的矩阵进行重排，需要插入大量的寄存器操作指令。在72F上，单条数据排布指令与单条OPA指令的延迟类似，且难以与OPA指令重叠。这些指令会极大程度上拖慢OPA指令的执行速度。为了避免这种情况，我们设计了一个新的矩阵数据格式，称为Interleaved Matrix Format (IMF)。IMF将矩阵的行元素交织存储，使得每个向量寄存器中的元素可以直接用于OPA指令，而无需额外的重排操作。通过将GEMM的kernel设计为可以接收与输出IMF格式，我们可以避免大量的数据排布开销，而仅仅需要在算子入口处进行一次数据格式转换。
-One of the key challenges in exploiting the outer-product accumulator (OPA) instructions is their requirement for a specialized input data layout. Unlike conventional GEMM implementations that operate on row-major or column-major matrices, OPA instructions mandate a custom format for operand loading and accumulation. A naïve approach that performs data layout transformation before every GEMM operation introduces prohibitive overhead, largely offsetting the benefits of hardware acceleration.
+One of the key challenges in exploiting the OPA instructions is their requirement for a specialized input data layout. Unlike conventional GEMM implementations that operate on row-major or column-major matrices, OPA instructions mandate a custom format for operand loading and accumulation. 
+For row-major matrices, the OPA instruction requires matrix A in GEMM to be read in a column-oriented manner. This necessitates block-wise transposition and interleaving prior to OPA execution. 
+A naive approach that performs data layout transformation before every GEMM operation introduces prohibitive overhead, largely offsetting the benefits of hardware acceleration.
+
 
 To mitigate this issue, we redesign the tensor layout to directly match the OPA input requirements. Specifically, we ensure that the output of one GEMM operator is stored in a layout that can be consumed directly by the subsequent GEMM, thereby eliminating the need for intermediate reformatting. In this design, format conversion is performed only at the entry and exit points of fused operator pipelines, significantly reducing redundant memory operations and improving overall efficiency.
 
-We further investigate efficient strategies for format conversion, which can be broadly categorized into three approaches:
+% By leveraging OPA array registers, the conversion can be achieved implicitly: data is loaded into the OPA register and then read out along the orthogonal dimension, effectively performing a transposition without additional shuffling.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/pack_sve.pdf}
+    \caption{Transformation by vector instructions or array register for FP16 OPA. With the exception of A0, blocks of the same color correspond to the same vector register.}
+    \label{fig:transformation}
+\end{figure}
 
-Scalar index-based conversion: explicitly computing memory addresses for each element and writing them into the target layout. This method is simple but incurs high instruction overhead and poor cache utilization.
 
-Vectorized register manipulation: leveraging SIMD instructions to permute and shuffle elements within vector registers, followed by storing the results in the desired layout. This approach provides better throughput but requires multiple shuffling stages for large tensors.
+We further investigate strategies for format conversion, which can be broadly categorized into three approaches:
 
-Outer-product accumulator (OPA) register transformation: directly utilizing the OPA array registers to perform block-level transpositions. The OPA registers support both vertical and horizontal reads, enabling efficient conversion between row-major and column-major formats as well as the interleaving required by OPA instructions.
+\textbf{Scalar index-based conversion:} explicitly computing memory addresses for each element and writing them into the target layout. This method is simple but incurs high instruction overhead and poor cache utilization.
 
-For row-major matrices, OPA requires matrix A in GEMM to be read in a column-oriented manner. This necessitates block-wise transposition and interleaving prior to OPA execution. By leveraging OPA array registers, the conversion can be achieved implicitly: data is loaded into the OPA register and then read out along the orthogonal dimension, effectively performing a transposition without additional shuffling.
+\textbf{Vectorized register manipulation:} leveraging SIMD instructions to permute and shuffle elements within vector registers, followed by storing the results in the desired layout. This approach provides better memory throughput but requires multiple shuffling stages for large tensors.
+Instruction \textit{trn} can extract the even- or odd-indexed elements from op1 and op2 and interleave them, so that each even or odd element of op1 is followed by the corresponding element of op2. The suffix represents the size of elements. \textit{s} is single (4 bytes) and \textit{d} is double (8bytes).
+As illustrated in Fig.~\ref{fig:transformation}(a), taking a 128-bit vector length as an example under FP16 precision, each uzp instruction can only exchange elements between two registers. Therefore, each stage requires $VL_{32}$ instructions (where $VL_{32}$ denotes the vector length for 32-bit elements), and the entire conversion process requires $\log_2(VL_{32})$ stages of shuffling. This hierarchical shuffling introduces non-trivial instruction overhead, particularly for long vectors. As the length of data exchange is limited by the ISA, we may need more instructions to simulate a single trn operation when the vector length exceeds a certain threshold. This further increases the instruction count and reduces efficiency.
+% 图~\ref{fig:transformation} (a) 以128bit向量长度为例展示了FP16精度的转换过程。每条寄存器操作指令一次只能交换两个寄存器中的元素，因此每一步需要$VL_32$ (vector length for 32-bit element)条指令，一共需要交换$log_2(VL_32)$次。
+
+\textbf{Outer-product accumulator register transformation:} directly utilizing the OPA array registers to perform block-level transpositions. The OPA registers support both vertical and horizontal reads, enabling efficient conversion between row-major and column-major formats as well as the interleaving required by OPA instructions. 
+As shown in Fig.~\ref{fig:transformation}(b), again taking a 128-bit vector length as an example under FP16 precision, we treat each array register as a vector register of 32-bit floating-point elements. In this way, two consecutive FP16 elements are guaranteed to be adjacent in the final layout, which satisfies the data alignment requirements of multi-lane accumulation in OPA instructions. The transformation process involves $VL_{32}$ horizontal writes and $VL_{32}$ vertical reads of the array registers, ensuring both correctness and high throughput with fewer shuffle operations compared to vectorized register manipulation.
+% 图~\ref{fig:transformation} (b) 以128bit向量长度为例展示了FP16精度的转换过程。将寄存器视为float的向量寄存器，这样可以保证连续的两个FP16元素在最终结果中相邻，以满足OPA指令多路累加对数据格式的要求。以一共需要$VL_32$次水平写入以及$VL_32$次垂直读取array register的操作。
+
 
 Among the three approaches, we adopt the third strategy as it provides the highest efficiency with minimal instruction overhead. This design not only reduces the frequency of layout transformations but also ensures that the transformations themselves are implemented in a hardware-friendly manner. Consequently, the proposed tensor layout optimization plays a critical role in enabling high-throughput GEMM execution under the OPA instruction model.
 \subsection{GEMM Kernel Design}
-In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of outer-product accumulator (OPA) instructions. OPA instructions exploit array registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these array registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
+In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit array registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these array registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
 
-In AlphaFold2, GEMMs typically involve small $K$ dimensions. If the GEMM were blocked along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
+In AlphaFold2, GEMMs typically involve small $K$ dimensions. If the GEMM were tiled along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
-Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-blocking, memory locality is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2’s typical workloads.
+Furthermore, the OPA array registers on 72F are partitioned differently depending on the numerical precision. For example, when using \texttt{INT8/FP16} operands with \texttt{INT32/FP32} accumulation, each physical array register is subdivided into four logical registers. Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than two subdivided registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available array registers for accumulation, ensuring maximal throughput across different precision settings.
+
+% Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-tiling, memory access is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2's typical workloads.
 
 \subsection{Quantization Strategy}
+% AlphaFold2中激活内存占比极高，权重只占用很小一部分，因此量化的重点位于激活上。
 In our implementation, we adopt a post-training quantization approach. Static quantization is difficult to apply effectively in AlphaFold2, since the activation values exhibit significant variation across different input sequences. As a result, a dynamic strategy is more suitable.
 
 Through experimentation, we observed that smoothing is not strictly necessary to achieve satisfactory accuracy. While applying a smoothing technique provides a marginal improvement, direct mapping quantization achieves comparable accuracy with lower complexity. Therefore, we adopt a direct mapping scheme.
@@ -31,3 +50,22 @@ Through experimentation, we observed that smoothing is not strictly necessary to
 To further reduce the memory overhead introduced by quantization, we integrate the scale computation into the GEMM pipeline. Specifically, during the write-back stage of the current GEMM, we accumulate the maximum value of the output. This maximum value is then used as the scale for the quantization of the subsequent GEMM. By coupling scale estimation with write-back, we avoid additional memory traversals and effectively minimize quantization overhead.
 
 \subsection{Multiple Processes on Multi-NUMA Nodes}
+To further improve scalability within a single compute node, we designed a set of communication interfaces that exploit shared memory. Unlike inter-node communication, processes on the same NUMA domain can exchange intermediate results directly through shared memory buffers, thereby avoiding redundant data copies.
+
+This communication mechanism is built on top of the memory movement unit available on the 72-F platform. By leveraging the memory movement unit, processes can offload data transfer from the CPU to the memory subsystem, reducing overhead and improving concurrency between computation and communication.
+
+% The shared-memory interfaces are designed to support collective operations commonly required in AlphaFold-style workloads, such as all-to-all and broadcast. 
+%Preliminary evaluation shows that this design significantly reduces intra-node communication latency and achieves near-linear scaling when the number of processes increases within a single NUMA node.
+
+\subsection{Adaptive Parallelism}
+A key challenge in optimizing AlphaFold2 on many-core CPUs arises from the variable length of protein sequences. In AlphaFold2, parallelization is primarily performed across multiple sequences in a batch, and in many cases the batch size is equal to the number of sequences. Consequently, short sequences provide limited parallelism, making it difficult to fully utilize all cores of a many-core CPU. Over-aggressive parallelization in such cases can lead to extremely small per-thread workloads, excessive thread synchronization, and costly cross-NUMA communication.
+
+To address this challenge, we design an adaptive parallelism strategy that dynamically determines the number of threads and NUMA domains to use based on sequence length. The core principles are as follows:
+\begin{itemize}
+    \item Single-NUMA execution for short sequences. For sequences below a predefined length threshold, all computation is confined to a single NUMA node. This ensures that per-thread workloads are sufficiently large and avoids expensive cross-node memory accesses.
+    \item Progressive multi-NUMA scaling for longer sequences. As sequence length increases, we gradually expand the computation across multiple NUMA nodes. Threads are assigned in a way that balances workload across nodes while minimizing inter-node communication.
+    \item Sequence-length-aware thread allocation. The number of threads is selected to match the computational demand of the sequence. For very long sequences, more threads are employed, spanning multiple NUMA nodes; for moderate sequences, a subset of cores is used within a single NUMA node.
+\end{itemize}
+
+
+This adaptive parallelism mechanism allows our implementation to efficiently utilize the many-core 72F architecture while avoiding the pitfalls of fixed thread allocation, ensuring that both short and long sequences achieve high throughput with minimal communication and synchronization overhead.
