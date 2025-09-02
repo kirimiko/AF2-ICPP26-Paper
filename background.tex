@@ -16,7 +16,7 @@ OPA instructions compute the outer product of two vectors from vector registers 
 
 For fp16 and int8 OPAs, input registers are required to contain interleaved vectors, such that the index distance between consecutive outer-product elements is 2 for fp16 and 4 for int8.
 
-\subsection{Model Quantization}
+\subsection{Mixed Precision Model Inference}
 Model quantization is a widely adopted technique in deep learning that reduces the precision of model parameters and intermediate activations to improve inference efficiency.~\cite{krishnamoorthi2018quantizing,polino2018model,jacob2018quantization} Instead of relying solely on high-precision floating-point formats such as FP32 or FP16, quantization typically converts data into lower-bit integer formats (e.g., INT8). This reduction not only decreases the memory footprint and data transfer volume but also allows hardware accelerators, including CPU matrix units, to perform more operations per cycle due to higher arithmetic density.
 
 Quantization methods can be broadly categorized into two groups: post-training quantization (PTQ) and quantization-aware training (QAT). PTQ directly converts a pre-trained floating-point model into a lower-precision version, often requiring minimal additional computation. While PTQ is attractive for deployment, it may suffer from accuracy degradation, particularly for models with sensitive numerical operations. In contrast, QAT simulates quantization effects during training, enabling the model to adapt to low-precision arithmetic. This usually yields higher accuracy but requires additional training resources.
