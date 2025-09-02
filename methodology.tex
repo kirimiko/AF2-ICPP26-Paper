@@ -42,6 +42,9 @@ Furthermore, the OPA array registers on 72F are partitioned differently dependin
 % Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-tiling, memory access is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2's typical workloads.
 
 \subsection{Mixed Precision Strategy}
+
+For accelerating AlphaFold2 with mixed precision strategy, we explore FP32-FP16 mixed precision strategy (FP16 inference) and further aggressive partial INT8 quantization (INT8 quantization) to obtain performance gain with acceptable accuracy. Both strategies are implemented based on our high-performance GEMM kernels.
+
 \subsubsection{FP16 Inference}
 % 在AlphaFold中，不同模块的算子对精度的容忍度不同。有些模块对精度非常敏感，比如ExtraEvoformer中的Outer Product Means模块，这个模块即使只是略微降低精度，也会导致最终精度大幅下降，甚至产生NAN，因此我们对这类模块仍然使用FP32精度。除了Outer Product Means模块之外，对于Softmax我们也使用FP32进行计算。在Embedding模块和Evoformer模块中，除了这两类算子之外，我们均直接使用FP16精度进行计算。
 In the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
