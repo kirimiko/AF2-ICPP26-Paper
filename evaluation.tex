@@ -38,8 +38,15 @@ On extremely long sequences, MatrixFold significantly outperforms FastFold. This
 
 For extremely long sequences, INT8 precision delivers notable speedups over FP16 within MatrixFold. This is because longer sequences correspond to larger matrix dimensions, which fully exploit the high throughput of INT8 OPA instructions. Moreover, in AlphaFold's computation, many GEMMs involve reductions along the sequence dimension. As the reduction dimension $K$ grows with sequence length, the relative impact of array-register data movement diminishes, and overall computational efficiency increases.
 
+The evaluation results on short sequences are presented in Figure~\ref{fig:endtoend}. A key observation is that when the sequence length is relatively short, the performance differences between FastFold, MatrixFold with FP16 precision, and MatrixFold with INT8 precision are not substantial. On extremely short sequences, FastFold demonstrates a slight advantage. This can be attributed to the parallelism constraints within a single Non-Uniform Memory Access (NUMA) node. Specifically, the cores within one NUMA node may not be fully utilized for these shorter sequences, limiting the parallel processing capability of MatrixFold. In contrast, FastFold is able to leverage the full parallelism of the GPU. Forcing MatrixFold to scale across multiple NUMA nodes in this scenario would introduce communication overhead that negates the benefits of increased parallelism.
 
-% 在极长序列上的评估结果如表~\ref{tab:inference_ex_long}所示。对比结果如图~\ref{fig:endtoend}所示。可以看出，在极长序列上，MatrixFold的性能远超过了FastFold。这是因为CPU平台的内存容量远大于A800的显存容量，因此FastFold只能将chunk size设置的很小，而这会影响FastFold的并行度，进而影响推理性能。而对于MatrixFold，由于内存足够支持极长序列的推理，我们可以使用与其它序列一致的并行度。可以看出在极长序列下INT8相比于FP16也会有明显的加速效果，这是因为当序列长度足够长时，矩阵规模更大，从而可以更加充分的利用INT8精度的OPA指令的高吞吐。且logits等部分矩阵运算的reduction维K与序列长度相关，K越大GEMM受array register的数据搬运影响越小，计算效率越高。
+As illustrated in Table~\ref{tab:inference_ex_long}, the performance landscape changes dramatically for extremely long sequences. Here, MatrixFold significantly outperforms FastFold. With a sequence length of 4096, MatrixFold achieves a 3.2$\times$ speedup over FastFold when using FP16 precision. This considerable advantage stems from the memory capacity of the CPU platform, which is far greater than the memory available on an A800 GPU. Consequently, FastFold is constrained to use a very small chunk size, which in turn curtails its parallelism and degrades inference performance. MatrixFold, however, can process these long sequences with the same degree of parallelism as shorter ones, thanks to the ample available memory.
+
+An interesting finding is the noticeable performance degradation of INT8 precision compared to FP16 for these long sequences. This is because the larger matrix sizes associated with longer sequences necessitate that the quantization operator traverses the matrix before the GEMM operation. This traversal disrupts spatial locality, meaning that the processor is less likely to access memory locations that are physically close to each other, leading to less efficient memory access patterns and a subsequent reduction in speed.
+
+% 在短序列上的评估结果如图X所示。可以看出，当序列长度较短时，FastFold、MatrixFold的FP16精度以及MatrixFold的INT8精度推理的性能差距并不大。FastFold在极短的序列上会有一定的优势，这是因为单NUMA内的72F的并行度会受到限制，而FastFold可以使用GPU的全部并行度。此时如果强行将MatrixFold扩展到多个NUMA上，通信开销会抵消掉并行度提升带来的好处。
+
+% 在极长序列上的评估结果如表~\ref{tab:inference_ex_long}所示。对比结果如图~\ref{fig:endtoend}所示。可以看出，在极长序列上，MatrixFold的性能远超过了FastFold。当序列长度达到4096时，MatrixFold在FP16精度下实现了3.2倍的加速比。这是因为CPU平台的内存容量远大于A800的显存容量，因此FastFold只能将chunk size设置的很小，而这会影响FastFold的并行度，进而影响推理性能。而对于MatrixFold，由于内存足够支持极长序列的推理，我们可以使用与其它序列一致的并行度。可以看出在极长序列下INT8相比于FP16也会有明显的速度降低，且序列越长，INT8效果越差。这是因为当序列长度足够长时，矩阵规模更大，而在进行GEMM之前的量化算子需要遍历整个矩阵，这破坏了空间局部性。
 % We first evaluate the end-to-end inference performance of AlphaFold2 across different implementations and numerical precisions. The benchmark is conducted on the CASP14~\cite{casp14} dataset, which serves as a representative workload for large-scale protein structure prediction. We compare four variants: the baseline FP32 implementation on CPUs, the FP16 and INT8 quantized versions optimized for matrix units, and FastFold running on a single NVIDIA A800 GPU.
 
 % Figure [X] reports the average inference time per sequence for each method. The results clearly show that quantization provides significant performance benefits on the CPU platform. In particular, the INT8 implementation achieves the highest speedup, outperforming the FP32 baseline by a substantial margin and even approaching, or in some cases surpassing, the performance of FastFold on the A800 GPU. The FP16 implementation also demonstrates notable acceleration over FP32, although the gains are less pronounced than INT8.
@@ -47,12 +54,12 @@ For extremely long sequences, INT8 precision delivers notable speedups over FP16
 % Notably, on X\% of CASP14 inputs, the INT8 implementation running on a single 72F processor achieves shorter inference time than FastFold on an A800 GPU, with an average speedup of Y× over the FP32 CPU baseline.
 
 % These findings highlight the effectiveness of our quantization and matrix-unit optimizations in narrowing the performance gap between CPU and GPU platforms. By combining low-precision computation with NUMA-aware execution, our optimized CPU implementation enables end-to-end inference throughput that makes CPU-based deployment of AlphaFold2 highly competitive.
-% \begin{figure*}[htbp]
-%     \centering
-%     \includegraphics[width=\textwidth]{figures/endtoend.pdf}
-%     \caption{End-to-End Performance Comparison} 
-%     \label{fig:endtoend}
-% \end{figure*}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/hbm_fastfold.pdf}
+    \caption{Inference Latency for Short Sequences.} 
+    \label{fig:endtoend}
+\end{figure}
 
 \begin{table}
     \centering
@@ -72,12 +79,12 @@ For extremely long sequences, INT8 precision delivers notable speedups over FP16
 
 
 
-\subsection{Attention Kernel Performance}
-To better understand the performance gains at the operator level, we conduct a detailed evaluation of the attention kernel, one of the most computationally demanding components of AlphaFold2's Evoformer module. We benchmark the kernel across a series of representative input shapes that reflect typical multiple sequence alignment (MSA) lengths and residue counts in CASP14.
+% \subsection{Attention Kernel Performance}
+% To better understand the performance gains at the operator level, we conduct a detailed evaluation of the attention kernel, one of the most computationally demanding components of AlphaFold2's Evoformer module. We benchmark the kernel across a series of representative input shapes that reflect typical multiple sequence alignment (MSA) lengths and residue counts in CASP14.
 
-Figure [Y] presents the measured execution times for FP32, FP16, and INT8 attention kernels on the 72F CPU platform. The results indicate that INT8 consistently achieves the lowest runtime across all tested input sizes, benefiting from both reduced arithmetic cost and lower memory bandwidth requirements. FP16 also provides clear improvements compared to FP32, though its advantage diminishes for smaller problem sizes where memory overhead dominates.
+% Figure [Y] presents the measured execution times for FP32, FP16, and INT8 attention kernels on the 72F CPU platform. The results indicate that INT8 consistently achieves the lowest runtime across all tested input sizes, benefiting from both reduced arithmetic cost and lower memory bandwidth requirements. FP16 also provides clear improvements compared to FP32, though its advantage diminishes for smaller problem sizes where memory overhead dominates.
 
-These results confirm that quantization directly accelerates the most critical kernel in AlphaFold2, which in turn translates into substantial end-to-end performance improvements. Moreover, the consistent scalability of INT8 attention kernels across diverse input shapes demonstrates the robustness of our optimization approach to real-world protein sequence variability.
+% These results confirm that quantization directly accelerates the most critical kernel in AlphaFold2, which in turn translates into substantial end-to-end performance improvements. Moreover, the consistent scalability of INT8 attention kernels across diverse input shapes demonstrates the robustness of our optimization approach to real-world protein sequence variability.
 \subsection{Accuracy Analysis}
 \begin{figure*}[htbp]
     \centering
@@ -85,16 +92,35 @@ These results confirm that quantization directly accelerates the most critical k
     \caption{TM-score of FP16 and INT8 inference on CASP14 dataset.} 
     \label{fig:tmscore}
 \end{figure*}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/T1024_fp16.png}
+        % \caption{(a) FP16 vs Real Structure.}
+    \end{minipage}
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/T1024_int8.png}
+        % \caption{(b) INT8 vs Real Structure.}
+    \end{minipage}
+    \caption{Visual comparison of predicted structures for sequence T1024 under different precisions. Left is FP16 and right is INT8.}
+    \label{fig:visual_compare}
+\end{figure}
 % 我们使用了CASP14中的所有数据对比了int8、fp16以及fp32精度下的AlphaFold2的预测精度。我们选用的评估标准为TM-Score
 To assess the impact of quantization on prediction accuracy, we adopt TM-score~\cite{zhang2004scoring} as the evaluation metric. TM-score is a widely used measure to quantify the structural similarity between two protein conformations, with values ranging from 0 to 1. A higher TM-score indicates greater similarity, and scores above 0.5 are generally considered to represent the same overall fold, while scores above 0.7 are typically regarded as highly reliable in structural biology studies.~\cite{xu2010significant} The TM-score of two structures can be calculated using the TM-align tool~\cite{zhang2005tm}.
 In our evaluation, we use the FP32 version of AlphaFold2 predictions as the reference baseline. The quantized models in FP16 and INT8 are evaluated by aligning their predicted protein structures against the FP32 results using the TM-align tool, after which TM-scores are computed. This allows us to directly quantify the structural consistency of low-precision predictions relative to the high-precision baseline.
-Figure~\ref{fig:tmscore} presents the TM-scores of predictions on a representative dataset from CASP14~\cite{casp14}, comparing FP16 and INT8 models against the FP32 baseline. The evaluation dataset contains real protein sequences of varying lengths, ensuring the validity of the results. The results show that both FP16 and INT8 predictions maintain TM-scores well above 0.7 for the vast majority of sequences, indicating that the reduced precision does not compromise the reliability of structural predictions.
-%To further illustrate the robustness of our quantization approach, {\color{red}Figure [Y]} depicts a visual comparison of predicted protein structures for a representative sequence (denoted as T1024). The overlay of FP32, FP16, and INT8 predictions demonstrates high structural consistency, with only negligible deviations observed in flexible loop regions.
-These results confirm that our quantization strategy preserves the accuracy of AlphaFold2 while improving inference efficiency. In particular, the INT8 quantized model achieves reliable structural predictions comparable to FP16 and FP32, thereby validating the feasibility of low-precision execution on CPU matrix units.
+Figure~\ref{fig:tmscore} presents the TM-scores of predictions on a representative dataset from CASP14~\cite{casp14}, comparing FP16 and INT8 models against the FP32 baseline. The evaluation dataset contains real protein sequences of varying lengths, ensuring the validity of the results. The results show that both FP16 and INT8 predictions maintain TM-scores well above 0.7 for the vast majority of sequences, indicating that the reduced precision does not compromise the reliability of structural predictions. Nevertheless, a noticeable degradation in accuracy can still be observed under INT8.
+
+To further illustrate the robustness of our approach, Figure~\ref{fig:visual_compare} depicts a visual comparison of predicted protein structures for a representative sequence (denoted as T1024). It can be observed that under FP16, the predicted structures are highly consistent with the ground truth, with secondary structures and other fine details being well preserved. In contrast, under INT8, although the atomic-level arrangement remains relatively close to the ground truth, the structural details are poorly maintained, and distinct secondary structures are largely unrecognizable.
+% 可以看出，在FP16下，预测的结构与真实结构高度一致，其二级结构等细节也得到了很好的保留。在INT8下，虽然原子结构与真实结构相比较为接近，但预测的结构细节保持较差，基本无法识别明显的二级结构。
+The overlay of FP32, FP16, and INT8 predictions demonstrates high structural consistency, with only negligible deviations observed in flexible loop regions.
+These results confirm that our mixed-precision strategy preserves the accuracy of AlphaFold2 while improving inference efficiency under FP16 precision. In particular, the INT8 quantized model achieves reliable structural predictions comparable to FP16 and FP32, thereby validating the feasibility of low-precision execution on CPU matrix units.
 
 
 \subsection{Scalability Evaluation}
-To further assess the scalability of our optimized CPU implementation, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying both the input sequence length and the numerical precision (FP32, FP16, INT8).
+To further assess the scalability of our optimized CPU implementation, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying both the input sequence length and the numerical precision (FP16, INT8).
 
 The experiments are conducted on a representative subset of sequences drawn from CASP14, categorized by length into short, medium, and long sequences (exact length ranges to be specified). For each category, we report the average inference time across the different NUMA configurations and precision modes.
 
@@ -104,7 +130,3 @@ Importantly, the scalability trends remain stable across different sequence leng
 
 These results validate that our approach not only improves single-threaded and single-NUMA performance, but also scales efficiently across the entire socket, enabling flexible resource allocation depending on the workload and system constraints.
 
-\subsection{Performance of GEMM}
-\subsubsection{Overhead of Data Layout Transformation}
-
-\subsubsection{Influence of Reduction Dimension K on GEMM}
