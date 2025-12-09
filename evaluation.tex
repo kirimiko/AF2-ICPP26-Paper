@@ -29,6 +29,24 @@ It is worth noting that our optimized implementation achieves inference performa
     
 \end{table}
 
+
+
+\subsection{Impact of Matrix Dimensions on Performance}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/gemm_sensitivity.pdf}
+    \caption{Performance sensitivity of GEMM kernels on the 72F platform. (a) Impact of $K$ ($M=N=32$): Throughput increases significantly with $K$ as the compute cycles amortize the register readout overhead. INT8 demonstrates superior scalability due to higher peak throughput. (b) Impact of $N$ ($M=K=32$): Performance remains stagnant, indicating that increasing the output matrix size cannot overcome the latency bottleneck induced by a small reduction dimension ($K$).} 
+    \label{fig:gemm_sensitivity}
+\end{figure}
+To quantify the architectural bottlenecks identified in Section~\ref{sec:analysis}, we conduct a microbenchmarking study by independently sweeping the reduction dimension ($K$) and the independent dimension ($N$). Figure~\ref{fig:gemm_sensitivity} illustrates the measured throughput for both FP16 and INT8 precisions.
+
+\textit{Reduction Dimension ($K$) Dominance:}
+As shown in Figure~\ref{fig:gemm_sensitivity}(a), we fix $M=N=32$ and vary $K$ from 32 to 2048. The results demonstrate a strong positive correlation between $K$ and performance. At small $K$ ($K=32$), the system is severely bound by the register readout overhead, yielding only $\sim$120 GFLOPS. However, as $K$ increases, the arithmetic intensity rises, effectively amortizing the fixed readout costs. Consequently, FP16 throughput saturates at 718 GFLOPS ($6.1\times$ speedup), while INT8 throughput scales almost linearly to 1685 GFLOPS ($13.7\times$ speedup), leveraging the higher peak compute capability of integer units.
+
+\textit{Insensitivity to Independent Dimension ($N$):}
+Conversely, Figure~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fixing the bottleneck dimension $K$ at 32. Strikingly, performance remains stagnant around 120 GFLOPS regardless of $N$ (ranging from 32 to 2048). This "flatline" behavior confirms that increasing parallelism along the independent dimension fails to mitigate the bottleneck caused by frequent register array draining. These empirical results corroborate our analysis: performance on the 72F architecture is strictly determined by the amortization efficiency of the $K$ dimension.
+
 \subsection{End to End Performance Comparison}
 \label{sec:end_to_end}
 % 我们选择了一系列不同长度的输入数据上评估了目前的sota FastFold以及FP16、INT8精度的MatrixFold，以评估MatrixFold在不同长度的序列上的加速效果。我们将序列长度按照1K以下、2K左右以及2K以上划分为短序列、长序列以及极长序列，分别进行了评估。在评估过程中，对于FastFold我们使用了一块80GB的A800，而对MatrixFold则使用了1颗72F CPU。
@@ -124,7 +142,7 @@ These results confirm that our mixed-precision strategy preserves the accuracy o
 \begin{figure*}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/a.pdf}
-    \caption{Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.} 
+    \caption{\color{red}Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.} 
     \label{fig:scala}
 \end{figure*}
 To further assess the scalability of our optimized CPU implementation, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying both the input sequence length and the numerical precision (FP16, INT8). We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
