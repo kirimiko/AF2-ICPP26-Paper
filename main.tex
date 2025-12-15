@@ -134,21 +134,71 @@
 \lstset{style=mystyle}
 % \newcommand{\yf}[1]{{\color{red} YF: #1}}
 
+%\usepackage{minted}
+
+%
+% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+%\settopmatter{printfolios=true,printacmref=false} % Removes citation information below abstract
+%\setcopyright{none}
+%\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+% Rights management information. 
+% This information is sent to you when you complete the rights form.
+% These commands have SAMPLE values in them; it is your responsibility as an author to replace
+% the commands and values with those provided to you when you complete the rights form.
+%
+% These commands are for a PROCEEDINGS abstract or paper.
+%\copyrightyear{2018}
+%\acmYear{2018}
+%\setcopyright{acmlicensed}
+% \acmConference[PPoPP'26]{ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming}{January 31--February 04, 2026}{Sydney, Australia}
+% \acmYear{2026}
+% \acmConference[]{}{}
+\acmConference[ICS'2025]{The 39th ACM International Conference on
+  Supercomputing}{June 9--11, 2025}{Salt Lake City, USA}
+\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
+\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+% \startPage{1}
+\settopmatter{printacmref=false}
+
+\setcopyright{none}
+%
+% These commands are for a JOURNAL article.
+%\setcopyright{acmcopyright}
+%\acmJournal{TOG}
+%\acmYear{2018}\acmVolume{37}\acmNumber{4}\acmArticle{111}\acmMonth{8}
+%\acmDOI{10.1145/1122445.1122456}
+
+%
+% Submission ID. 
+% Use this when submitting an article to a sponsored event. You'll receive a unique submission ID from the organizers
+% of the event, and this ID should be used as the parameter to this command.
+%\acmSubmissionID{123-A56-BU3}
+
+%
+% The majority of ACM publications use numbered citations and references. If you are preparing content for an event
+% sponsored by ACM SIGGRAPH, you must use the "author year" style of citations and references. Uncommenting
+% the next command will enable that style.
+% \citestyle{acmauthoryear}
+%\hypersetup{draft}
+%
+% end of the preamble, start of the body of the document source.
 
 \begin{document}
 
 
 %% Title information
-\title[MatrixFold: Accelerating Mixed-Precision Alphafold Inference on CPU]{MatrixFold: Accelerating Mixed-Precision Alphafold Inference via Outer Product Unit on Manycore CPUs}         %% [Short Title] is optional;
-                                        %% when present, will be used in
-                                        %% header instead of Full Title.
+\title[MatrixFold: Acceleration of Mixed-Precision Alphafold Inference on CPU]{MatrixFold: Hardware-Aware Acceleration of Mixed-Precision AlphaFold Inference on Manycore CPUs with Outer-Product Units}         %% [Short Title] is optional;
+%% when present, will be used in
+%% header instead of Full Title.
 %\titlenote{For simple use only}             %% \titlenote is optional;
-                                        %% can be repeated if necessary;
-                                        %% contents suppressed with 'anonymous'
+%% can be repeated if necessary;
+%% contents suppressed with 'anonymous'
 %\subtitle{Check the format}                     %% \subtitle is optional
 %\subtitlenote{Everything should just work}       %% \subtitlenote is optional;
-                                        %% can be repeated if necessary;
-                                        %% contents suppressed with 'anonymous'
+%% can be repeated if necessary;
+%% contents suppressed with 'anonymous'
 
 
 %% Author information
@@ -216,8 +266,9 @@
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
-AlphaFold2 has achieved remarkable accuracy in protein structure prediction, yet its high computational and memory costs remain a significant barrier to large-scale deployment. While prior optimization efforts have been predominantly GPU-centric, the potential for CPU acceleration remains largely unexplored. This paper introduces MatrixFold, the first systematic study of mixed-precision AlphaFold2 inference on a many-core CPU architecture. Targeting 72F processor with dedicated matrix units and on-package memory, we implement a series of computation and communication optimizations. These include highly optimized GEMM kernels, hardware-based communication mechanisms, and adaptive parallelism strategies to efficiently leverage the many-core resources. On CASP14 benchmarks, MatrixFold demonstrates high structural accuracy with TM-scores above 0.7. While its performance is comparable to GPU-based FastFold on short sequences, it shows a significant advantage on long sequences, achieving an inference speedup of 1.2$\times$ to 3.2$\times$ over FastFold on the NVIDIA A800 GPU.
+	AlphaFold2 has achieved remarkable accuracy in protein structure prediction, yet its high computational and memory costs remain a significant barrier to large-scale deployment. While prior optimization efforts have been predominantly GPU-centric, the potential for CPU acceleration remains largely unexplored. This paper introduces MatrixFold, the first systematic study of quantized AlphaFold2 inference on a many-core CPU architecture. Targeting 72F processor with dedicated matrix units and on-package memory, we implement a series of computation and communication optimizations. These include highly optimized GEMM kernels, hardware-based communication mechanisms, and adaptive parallelism strategies to efficiently leverage the many-core resources. On CASP14 benchmarks, MatrixFold demonstrates high structural accuracy with TM-scores above 0.7. While its performance is comparable to GPU-based FastFold on short sequences, it shows a significant advantage on long sequences, achieving inference speedups of 1.2$\times$ to 3.2$\times$ over FastFold on the NVIDIA A800 GPU and 1.5$\times$ to 5.5$\times$ over Open-Omics-AlphaFold on Intel Xeon w9-3495X.
 \end{abstract}
+\keywords{AlphaFold2, Protein Structure Prediction, Mixed-Precision Inference, Many-core CPU, Matrix Unit, Outer Product Unit}
 
 
 %% \maketitle

@@ -4,8 +4,8 @@
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.48\textwidth]{figures/smopa.png}
-    \caption{\color{red}4-way Outer-Product Accumulator (OPA) Instruction on 72F CPU}
+    \includegraphics[width=0.48\textwidth]{figures/opa_new.pdf}
+    \caption{4-way Outer-Product Accumulator (OPA) Instruction on 72F CPU}
     \label{fig:opa}
 \end{figure}
 
@@ -19,19 +19,19 @@
 The core of the matrix unit on 72F CPU is a reconfigurable two-dimensional matrix register file. Unlike traditional fixed-size vector registers, this storage is logically partitioned into multiple independent accumulator tiles. The number of available tiles is inversely proportional to the bit-width of the accumulator elements. For the 32-bit accumulation format used in this work (covering both FP16 and INT8 workloads), the matrix storage acts as four distinct logical tiles. This multi-tile organization allows the hardware to maintain multiple partial sums simultaneously.
 A key feature of this architecture is its support for orthogonal access. The accumulator tiles are mapped to the physical storage in a way that allows vectors to be read from or written to the tiles either horizontally (as rows) or vertically (as columns). This capability eliminates the overhead of matrix transposition in software, as the unit can efficiently access dimensionally distinct data slices required for complex matrix operations.
 
-To update these tiles, the unit executes a generalized \textit{$N$-way outer product}. Instead of performing a rank-1 update ($u \otimes v$), the hardware aggregates inputs to perform a rank-$N$ update in a single step. For an input vector pair, the accelerator computes the dot product of length-$N$ sub-vectors and accumulates the result into the 32-bit destination tile.
+To update these tiles, the unit executes a generalized \textit{$K$-way outer product}. Instead of performing a rank-1 update ($u \otimes v$), the hardware aggregates inputs to perform a rank-$K$ update in a single step. For an input vector pair, the accelerator computes the outer product of length-$K$ sub-vectors and accumulates the result into the 32-bit destination tile.
 The mathematical formulation of this update is given by:
 \begin{equation}
-D \leftarrow D + \sum\limits_{i=1}^{K}(u_i \otimes v_i)
+    D \leftarrow D + \sum\limits_{i=1}^{K}(u_i \otimes v_i)
 \end{equation}
 where $D$ represents the two-dimensional accumulator tile, and $u$ and $v$ represent the horizontal and vertical source vectors derived from the vector register file. To ensure numerical stability and prevent overflow during accumulation, the hardware employs a widening strategy where the accumulator tile maintains a higher precision than the input vectors.
 
 
 For half-precision floating-point (FP16) workloads, the accelerator executes a \textit{2-way outer product} ($K=2$) to update a single-precision (FP32) accumulator tile.
-In this mode, the hardware treats the source vectors as sequences of adjacent element pairs. For each position $(i, j)$ in the destination tile, the unit simultaneously fetches a pair of FP16 values from the horizontal source vector and a corresponding pair from the vertical source vector. It then computes the dot product of these two pairs and accumulates the result into the FP32 destination. This 2-way aggregation effectively doubles the floating-point operations per cycle relative to a standard outer product while maintaining numerical stability through precision widening.
+In this mode, the hardware treats the source vectors as sequences of adjacent element pairs. For each position $(i, j)$ in the destination tile, the unit simultaneously fetches a pair of FP16 values from the horizontal source vector and a corresponding pair from the vertical source vector. It then computes the outer product of these two pairs and accumulates the result into the FP32 destination. This 2-way aggregation effectively doubles the floating-point operations per cycle relative to a standard outer product while maintaining numerical stability through precision widening.
 
 For quantized integer inference, the architecture leverages the reduced bit-width to perform a \textit{4-way outer product} ($K=4$), as illustrated in Figure~\ref{fig:opa}.
-When operating on 8-bit integer (INT8) data, the source vectors are processed as groups of four consecutive elements. The hardware computes the dot product of a 4-element sub-vector from the row input and a 4-element sub-vector from the column input, accumulating the sum into a 32-bit integer (INT32) destination tile. By packing four 8-bit multiplications into a single accumulator update, this 4-way mechanism significantly increases the arithmetic intensity and allows for efficient utilization of the available memory bandwidth.
+When operating on 8-bit integer (INT8) data, the source vectors are processed as groups of four consecutive elements. The hardware computes the outer product of a 4-element sub-vector from the row input and a 4-element sub-vector from the column input, accumulating the sum into a 32-bit integer (INT32) destination tile. By packing four 8-bit multiplications into a single accumulator update, this 4-way mechanism significantly increases the arithmetic intensity and allows for efficient utilization of the available memory bandwidth.
 
 
 
