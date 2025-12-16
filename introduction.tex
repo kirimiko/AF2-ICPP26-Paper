@@ -32,10 +32,14 @@ To overcome these challenges, we present MatrixFold, a highly optimized mixed-pr
 Although the specific implementation details of the target machine are subject to confidentiality constraints, its architectural characteristics and ISA closely resemble Apple M4, enabling broader applicability of our techniques.
 Our contributions are as follows:
 \begin{itemize}
-    \item We present a systematic study and implementation of mix-precision (FP16 and INT8) AlphaFold2 inference on a many-core CPU architecture.
-    \item We propose a suite of computation and communication optimizations specifically tailored for the target 72F processor, leveraging its dedicated matrix units and multi-NUMA architecture.
-    \item We conduct a comprehensive evaluation on the CASP14 dataset, demonstrating that MatrixFold achieves a significant performance improvements on long sequences, outperforming the state-of-the-art GPU implementation, FastFold on A800, by 1.2$\times$ to 3.2$\times$.
-    \item We validate that our mixed-precision strategy achieves substantial performance gains without compromising prediction accuracy, confirming the viability and effectiveness of mixed-precision AlphaFold2 on CPUs.
+    \item With systematic study of mixed-precision opportunity, we propose MatrixFold, the first mix-precision (FP16 and INT8) implementation of AlphaFold2 inference on a many-core CPU architecture with outer-product matrix units. 
+    \item We propose outer-product-accumulator-based GEMM kernels specifically optimized for the 72F processor with outer-product units, effectively addressing the challenges posed by the prevalence of \textit{tall and skinny} GEMM operations in AlphaFold2.
+    \item We design adaptive parallelism and multi-NUMA-aware communication strategies to optimize performance on the 72F's many-core architecture, minimizing synchronization overhead and inter-node data transfer costs.
+    \item We conduct a comprehensive evaluation on the CASP14 dataset, demonstrating that MatrixFold achieves significant performance improvements on long sequences, outperforming the state-of-the-art GPU implementation, FastFold on A800, by 1.2$\times$ to 3.2$\times$, without compromising prediction accuracy. 
+    % \item We present a systematic study and implementation of mix-precision (FP16 and INT8) AlphaFold2 inference on a many-core CPU architecture.
+    % \item We propose a suite of computation and communication optimizations specifically tailored for the target 72F processor, leveraging its dedicated matrix units and multi-NUMA architecture.
+    % \item We conduct a comprehensive evaluation on the CASP14 dataset, demonstrating that MatrixFold achieves a significant performance improvements on long sequences, outperforming the state-of-the-art GPU implementation, FastFold on A800, by 1.2$\times$ to 3.2$\times$.
+    % \item We validate that our mixed-precision strategy achieves substantial performance gains without compromising prediction accuracy, confirming the viability and effectiveness of mixed-precision AlphaFold2 on CPUs.
           % \item We design a set of high-performance GEMM kernels leveraging matrix units to accelerate the inference of AlphaFold2. 
           % \item We enable quantized inference on CPUs by implementing both FP16 and INT8 execution, moving beyond the conventional FP32/BF16 precision levels.
           % \item We design NUMA-aware parallelization and memory optimizations that exploit the 72F's many-core design and high-bandwidth on-package memory.

@@ -6,7 +6,7 @@
 
 \subsubsection{Tensor Layout Optimization}
 
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/layout.pdf}
     \caption{Tensor Layout Design.}
@@ -36,7 +36,7 @@ Detailed optimization is discussed in Section~\ref{sec:optimizations:format_conv
 \subsubsection{Format Conversion Optimization}
 \label{sec:optimizations:format_conversion}
 
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/pack_sve.pdf}
     \caption{Transformation by vector instructions or array register for FP16 OPA under vector length of 128-bits.}
@@ -97,9 +97,9 @@ Moreover, the key challenge in optimizing AlphaFold2 on many-core CPUs arises fr
 
 To address this challenge, we design an adaptive parallelism strategy that dynamically determines the number of threads and NUMA domains to use based on sequence length. The core principles are as follows:
 \begin{itemize}
-    \item Single-NUMA execution for short sequences. For sequences below a predefined length threshold, all computation is confined to a single NUMA node. This ensures that per-thread workloads are sufficiently large and avoids expensive cross-node memory accesses.
-    \item Progressive multi-NUMA scaling for longer sequences. As sequence length increases, we gradually expand the computation across multiple NUMA nodes. Threads are assigned in a way that balances workload across nodes while minimizing inter-node communication.
-    \item Sequence-length-aware thread allocation. The number of threads is selected to match the computational demand of the sequence. For very long sequences, more threads are employed, spanning multiple NUMA nodes; for moderate sequences, a subset of cores is used within a single NUMA node.
+    \item \textit{Single-NUMA execution for short sequences.} For sequences below a predefined length threshold, all computation is confined to a single NUMA node. This ensures that per-thread workloads are sufficiently large and avoids expensive cross-node memory accesses.
+    \item \textit{Progressive multi-NUMA scaling for longer sequences.} As sequence length increases, we gradually expand the computation across multiple NUMA nodes. Threads are assigned in a way that balances workload across nodes while minimizing inter-node communication.
+    \item \textit{Sequence-length-aware thread allocation.} The number of threads is selected to match the computational demand of the sequence. For very long sequences, more threads are employed, spanning multiple NUMA nodes; for moderate sequences, a subset of cores is used within a single NUMA node.
 \end{itemize}
 
 

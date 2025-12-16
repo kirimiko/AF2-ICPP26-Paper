@@ -35,7 +35,7 @@ It is worth noting that our optimized implementation achieves inference performa
 \subsection{Impact of Matrix Dimensions on Performance}
 \label{sec:evaluation:sensitivity}
 
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \begin{subfigure}{\linewidth}
     \includegraphics[width=\linewidth]{figures/gemm_sensitivity1.pdf}
@@ -58,7 +58,7 @@ Conversely, Figure~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by f
 
 \subsection{End to End Performance Comparison}
 \label{sec:end_to_end}
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/overall_performance.pdf}
     \caption{Inference Latency on all sequences.}
@@ -117,7 +117,7 @@ These results indicate that, for AlphaFold inference, the benefits of INT8 quant
 % Notably, on X\% of CASP14 inputs, the INT8 implementation running on a single 72F processor achieves shorter inference time than FastFold on an A800 GPU, with an average speedup of Y× over the FP32 CPU baseline.
 
 % These findings highlight the effectiveness of our quantization and matrix-unit optimizations in narrowing the performance gap between CPU and GPU platforms. By combining low-precision computation with NUMA-aware execution, our optimized CPU implementation enables end-to-end inference throughput that makes CPU-based deployment of AlphaFold2 highly competitive.
-% \begin{figure}[htbp]
+% \begin{figure}[t]
 %     \centering
 %     \includegraphics[width=\linewidth]{figures/speedup.pdf}
 %     \caption{Speedup over Open-Omics-AlphaFold on all Sequences.}
@@ -150,7 +150,7 @@ These results indicate that, for AlphaFold inference, the benefits of INT8 quant
 % These results confirm that quantization directly accelerates the most critical kernel in AlphaFold2, which in turn translates into substantial end-to-end performance improvements. Moreover, the consistent scalability of INT8 attention kernels across diverse input shapes demonstrates the robustness of our optimization approach to real-world protein sequence variability.
 
 \subsection{Performance of Different Pack Strategies}
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/pack_performance.pdf}
     \caption{Impact of different pack strategies on GEMM performance. M = 1024, K = 128.}
@@ -162,14 +162,14 @@ As shown in Fig.~\ref{fig:pack_strategy}, the register-array-based packing strat
 % As shown in figure~\ref{fig:pack_strategy}, 基于register-array的pack的性能最高。当矩阵规模较小时，pack的开销占比较大，而在AlphaFold中存在大量batch gemm，其batch较大而矩阵较小，因此会导致pack的开销较大，进而影响整体性能。
 
 \subsection{Accuracy Analysis}
-\begin{figure*}[htbp]
+\begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/result_pdb.pdf}
     \caption{TM-score of FP16 and INT8 inference on CASP14 dataset.}
     \label{fig:tmscore}
 \end{figure*}
 
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \begin{minipage}[b]{0.47\linewidth}
         \centering
@@ -196,9 +196,9 @@ These results confirm that our mixed-precision strategy preserves the accuracy o
 
 
 \subsection{Scalability Evaluation}
-\begin{figure*}[htbp]
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/scale.pdf}
+    \includegraphics[width=\textwidth]{figures/scale.pdf}
     \caption{Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.}
     \label{fig:scala}
 \end{figure*}
