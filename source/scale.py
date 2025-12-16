@@ -39,7 +39,7 @@ for i, seq in enumerate(seq_lengths):
     ax.set_xlabel('NUMA nodes', fontsize=fontsize)
     ax.set_xticks(numa)
     ax.set_xticklabels(numa, fontsize=fontsize)
-    ax.set_yticklabels([round(x, 1) for x in ax.get_yticks()], fontsize=fontsize)
+    ax.set_yticklabels([int(x) for x in ax.get_yticks()], fontsize=fontsize)
     ax.grid(True, linestyle=':', alpha=0.5)
 
 axes[0].set_ylabel('Time (s)', fontsize=fontsize)
