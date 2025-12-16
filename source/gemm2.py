@@ -32,7 +32,7 @@ plt.rcParams.update({
 })
 
 # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-fig, (ax1) = plt.subplots(1, 1, figsize=(12, 5))
+fig, (ax1) = plt.subplots(1, 1, figsize=(12, 6.1))
 
 # ===========================
 # 3. 子图 (a): Impact of K
@@ -55,7 +55,7 @@ plt.tight_layout()
 plt.savefig('../figures/gemm_sensitivity1.pdf', format='pdf', bbox_inches='tight')
 print("Figure saved as gemm_sensitivity1.pdf")
 
-fig, (ax2) = plt.subplots(1, 1, figsize=(12, 5))
+fig, (ax2) = plt.subplots(1, 1, figsize=(12, 6.1))
 # ===========================
 # 4. 子图 (b): Impact of N
 # ===========================
