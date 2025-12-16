@@ -37,8 +37,15 @@ It is worth noting that our optimized implementation achieves inference performa
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/gemm_sensitivity.pdf}
-    \caption{Performance sensitivity of GEMM kernels on the 72F platform. (a) Impact of $K$ ($M=N=32$) (b) Impact of $N$ ($M=K=32$).}
+    \begin{subfigure}{\linewidth}
+    \includegraphics[width=\linewidth]{figures/gemm_sensitivity1.pdf}
+    \caption{Sensitivity to K (M=N=32)}
+    \end{subfigure}
+    \begin{subfigure}{\linewidth}
+    \includegraphics[width=\linewidth]{figures/gemm_sensitivity2.pdf}
+    \caption{Sensitivity to N (M=K=32)}
+    \end{subfigure}
+    \caption{Performance sensitivity of GEMM kernels on the 72F platform.}
     \label{fig:gemm_sensitivity}
 \end{figure}
 To quantify the architectural bottlenecks identified in Section~\ref{sec:analysis}, we conduct a microbenchmarking study by independently sweeping the reduction dimension ($K$) and the independent dimension ($N$). Figure~\ref{fig:gemm_sensitivity} illustrates the measured throughput for both FP16 and INT8 precisions.
@@ -145,8 +152,8 @@ These results indicate that, for AlphaFold inference, the benefits of INT8 quant
 \subsection{Performance of Different Pack Strategies}
 \begin{figure}[htbp]
     \centering
-    % \includegraphics[width=\linewidth]{figures/pack_strategy.pdf}
-    \caption{Impact of different pack strategies on GEMM performance.}
+    \includegraphics[width=\linewidth]{figures/pack_performance.pdf}
+    \caption{Impact of different pack strategies on GEMM performance. M = 1024, K = 128.}
     \label{fig:pack_strategy}
 \end{figure}
 To evaluate the effectiveness of our proposed packing strategies, we conduct a series of microbenchmarks measuring the performance of GEMM operations under different packing configurations. Figure~\ref{fig:pack_strategy} presents the results, comparing three packing strategies: scalar packing, vector packing, and register-array packing. The benchmarks are performed on representative GEMM shapes commonly encountered in AlphaFold2 inference.
