@@ -22,7 +22,7 @@ fastfold = {512: 175, 1024: 329, 1576: 500}
 open_omics = {512: 257.78, 1024: 682.7, 1576: 1559.32}
 
 # 创建子图，每个子图纵轴独立
-fig, axes = plt.subplots(1, 3, figsize=(18,5), sharey=False)
+fig, axes = plt.subplots(1, 3, figsize=(18,5.5), sharey=False)
 
 for i, seq in enumerate(seq_lengths):
     ax = axes[i]
@@ -39,6 +39,7 @@ for i, seq in enumerate(seq_lengths):
     ax.set_xlabel('NUMA nodes', fontsize=fontsize)
     ax.set_xticks(numa)
     ax.set_xticklabels(numa, fontsize=fontsize)
+    ax.set_yticklabels([round(x, 1) for x in ax.get_yticks()], fontsize=fontsize)
     ax.grid(True, linestyle=':', alpha=0.5)
 
 axes[0].set_ylabel('Time (s)', fontsize=fontsize)
