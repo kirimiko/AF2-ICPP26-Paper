@@ -1,4 +1,5 @@
 \section{Background}
+\label{sec:background}
 \subsection{Matrix Unit on 72F CPU}
 % 72F CPU提供了OPA(Outer-Product Accumulator)以及配套的向量指令用于加速矩阵计算。72F使用一个array register来存储外积计算的结果，该array register可以被拆分为1个8-bits元素、2个16-bits元素、4个32-bits元素或8个64-bits元素的寄存器。对于每种数据类型，array register均含有VL(vector lenght) $\times$ VL个元素。OPA指令从将两个向量寄存器中的向量做外积，并累加到相应精度的array register上。72F 提供了int8、fp16、fp32、fp64的OPA指令。int8的OPA指令会将输入寄存器划分为4个向量，并在int32精度的array register上累加4组外积的结果。fp16的OPA指令会将输入寄存器划分为两个向量，并在fp32精度的array register上累加2组外积的结果。fp32与fp64则是直接在相应精度的array register上累加一组外积的结果。对于fp16(int8)的OPA指令，72F要求同一个输入寄存器内的向量是交织的，也即每个外积向量的元素索引之差为2(4)。
 
