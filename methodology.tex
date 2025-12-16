@@ -1,6 +1,10 @@
-\section{Optimizations}
+% \section{Optimizations}
+\section{Methodology}
 \label{sec:optimizations}
-\subsection{Tensor Layout Optimization}
+
+\subsection{OPA-aware GEMM}
+
+\subsubsection{Tensor Layout Optimization}
 
 \begin{figure}[htbp]
     \centering
@@ -29,7 +33,7 @@ Detailed optimization is discussed in Section~\ref{sec:optimizations:format_conv
 
 % By leveraging OPA array registers, the conversion can be achieved implicitly: data is loaded into the OPA register and then read out along the orthogonal dimension, effectively performing a transposition without additional shuffling.
 
-\subsection{Format Conversion Optimization}
+\subsubsection{Format Conversion Optimization}
 \label{sec:optimizations:format_conversion}
 
 \begin{figure}[htbp]
@@ -53,10 +57,10 @@ As shown in Fig.~\ref{fig:transformation}(b), again taking a 128-bit vector leng
 
 
 Among the three approaches, we adopt the third strategy as it provides the highest efficiency with minimal instruction overhead. This design not only reduces the frequency of layout transformations but also ensures that the transformations themselves are implemented in a hardware-friendly manner. Consequently, the proposed tensor layout optimization plays a critical role in enabling high-throughput GEMM execution under the OPA instruction model.
-\subsection{GEMM Kernel Design}
+\subsubsection{Kernel Design}
 In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit array registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these array registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
 
-In AlphaFold2, GEMMs typically involve small $K$ dimensions. If the GEMM were tiled along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
+In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs). If the GEMM were tiled along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
 Furthermore, the OPA array registers on 72F are partitioned differently depending on the numerical precision. For example, when using \texttt{INT8/FP16} operands with \texttt{INT32/FP32} accumulation, each physical array register is subdivided into four logical registers. Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than two subdivided registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available array registers for accumulation, ensuring maximal throughput across different precision settings.
 
@@ -79,7 +83,8 @@ Through experimentation, we observed that smoothing is not strictly necessary to
 
 To further reduce the memory overhead introduced by quantization, we integrate the scale computation into the GEMM pipeline. Specifically, during the write-back stage of the current GEMM, we accumulate the maximum value of the output. This maximum value is then used as the scale for the quantization of the subsequent GEMM. By coupling scale estimation with write-back, we avoid additional memory traversals and effectively minimize quantization overhead.
 
-\subsection{Multiple Processes on Multi-NUMA Nodes}
+% \subsection{Multiple Processes on Multi-NUMA Nodes}
+\subsection{Adaptive Numa-aware Parallelism}
 To further improve scalability within a single compute node, we designed a set of communication interfaces that exploit shared memory. Unlike inter-node communication, processes on the same NUMA domain can exchange intermediate results directly through shared memory buffers, thereby avoiding redundant data copies.
 
 This communication mechanism is built on top of the memory movement unit available on the 72F platform. By leveraging the memory movement unit, processes can offload data transfer from the CPU to the memory subsystem, reducing overhead and improving concurrency between computation and communication.
@@ -87,8 +92,8 @@ This communication mechanism is built on top of the memory movement unit availab
 % The shared-memory interfaces are designed to support collective operations commonly required in AlphaFold-style workloads, such as all-to-all and broadcast. 
 %Preliminary evaluation shows that this design significantly reduces intra-node communication latency and achieves near-linear scaling when the number of processes increases within a single NUMA node.
 
-\subsection{Adaptive Parallelism}
-A key challenge in optimizing AlphaFold2 on many-core CPUs arises from the variable length of protein sequences. In AlphaFold2, parallelization is primarily performed across multiple sequences in a batch, and in many cases the batch size is equal to the number of sequences. Consequently, short sequences provide limited parallelism, making it difficult to fully utilize all cores of a many-core CPU. Over-aggressive parallelization in such cases can lead to extremely small per-thread workloads, excessive thread synchronization, and costly cross-NUMA communication.
+% \subsection{Adaptive Parallelism}
+Moreover, the key challenge in optimizing AlphaFold2 on many-core CPUs arises from the variable length of protein sequences. In AlphaFold2, parallelization is primarily performed across multiple sequences in a batch, and in many cases the batch size is equal to the number of sequences. Consequently, short sequences provide limited parallelism, making it difficult to fully utilize all cores of a many-core CPU. Over-aggressive parallelization in such cases can lead to extremely small per-thread workloads, excessive thread synchronization, and costly cross-NUMA communication.
 
 To address this challenge, we design an adaptive parallelism strategy that dynamically determines the number of threads and NUMA domains to use based on sequence length. The core principles are as follows:
 \begin{itemize}
