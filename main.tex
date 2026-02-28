@@ -1,60 +1,11 @@
-%% For double-blind review submission, w/o CCS and ACM Reference (max submission space)
-\documentclass[sigconf]{acmart}
-\settopmatter{printfolios=true,printccs=false,printacmref=false}
-%% For double-blind review submission, w/ CCS and ACM Reference
-%\documentclass[sigplan,review,anonymous]{acmart}\settopmatter{printfolios=true}
-%% For single-blind review submission, w/o CCS and ACM Reference (max submission space)
-%\documentclass[sigplan,review]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
-%% For single-blind review submission, w/ CCS and ACM Reference
-%\documentclass[sigplan,review]{acmart}\settopmatter{printfolios=true}
-%% For final camera-ready submission, w/ required CCS and ACM Reference
-%\documentclass[sigplan]{acmart}\settopmatter{}
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.21 of 2022/01/12
+%
+\documentclass[runningheads]{llncs}
+%
+\usepackage[T1]{fontenc}
 
-
-%% Conference information
-%% Supplied to authors by publisher for camera-ready submission;
-%% use defaults for review submission.
-% \acmConference[PPoPP'26]{ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming}{January 31--February 04, 2026}{Sydney, Australia}
-\acmYear{2026}
-\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-\startPage{1}
-
-%% Copyright information
-%% Supplied to authors (based on authors' rights management selection;
-%% see authors.acm.org) by publisher for camera-ready submission;
-%% use 'none' for review submission.
-\setcopyright{none}
-%\setcopyright{acmcopyright}
-%\setcopyright{acmlicensed}
-%\setcopyright{rightsretained}
-%\copyrightyear{2018}           %% If different from \acmYear
-
-%% Bibliography style
-\bibliographystyle{ACM-Reference-Format}
-%% Citation style
-%\citestyle{acmauthoryear}  %% For author/year citations
-%\citestyle{acmnumeric}     %% For numeric citations
-%\setcitestyle{nosort}      %% With 'acmnumeric', to disable automatic
-                            %% sorting of references within a single citation;
-                            %% e.g., \cite{Smith99,Carpenter05,Baker12}
-                            %% rendered as [14,5,2] rather than [2,5,14].
-%\setcitesyle{nocompress}   %% With 'acmnumeric', to disable automatic
-                            %% compression of sequential references within a
-                            %% single citation;
-                            %% e.g., \cite{Baker12,Baker14,Baker16}
-                            %% rendered as [2,3,4] rather than [2-4].
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Note: Authors migrating a paper from traditional SIGPLAN
-%% proceedings format to PACMPL format must update the
-%% '\documentclass' and topmatter commands above; see
-%% 'acmart-pacmpl-template.tex'.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%% Some recommended packages.
 \usepackage{booktabs}   %% For formal tables:
                         %% http://ctan.org/pkg/booktabs
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
@@ -83,55 +34,9 @@
 \usepackage{listings}
 \usepackage{bigstrut}
 \usepackage{makecell}
-\makeatletter
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}[section]
-\let\orig@lstnumber=\thelstnumber
-\newcommand\lstsetnumber[1]{\gdef\thelstnumber{#1}}
-\newcommand\lstresetnumber{\global\let\thelstnumber=\orig@lstnumber}
 
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
 
-\definecolor{diffstart}{named}{gray}
-\definecolor{diffincl}{named}{blue}
-\definecolor{diffrem}{named}{orange}
-\lstdefinelanguage{diff}{
-  %basicstyle=\fontsize{6.5}{6}\ttfamily,
-  basicstyle=\scriptsize\ttfamily,
-  morecomment=[f][\color{diffstart}]{@@},
-  morecomment=[f][\color{diffincl}]{+\ },
-  morecomment=[f][\color{diffrem}]{-\ },
-}
 
-\lstdefinestyle{mystyle}{
-	% backgroundcolor=\color{backcolour},   
-	commentstyle=\color{codegreen},
-	keywordstyle=\color{magenta},
-	numberstyle=\tiny,
-	stringstyle=\color{codepurple},
-	% basicstyle=\linespread{0.7}\ttfamily\scriptsize,
-	basicstyle=\fontsize{6.5}{6}\ttfamily,
-	breakatwhitespace=false,         
-	breaklines=true,                 
-	captionpos=b,                    
-	keepspaces=true,                 
-	numbers=left,                    
-	numbersep=5pt,                  
-	showspaces=false,                
-	showstringspaces=false,
-	showtabs=false,                  
-	tabsize=2,
-	aboveskip=0pt,
-	belowskip=0pt,
-	xleftmargin=2em,
-	xrightmargin=0em,
-	frame=topline,
-	mathescape=true,
-	fontadjust=true
-}
-
-\lstset{style=mystyle}
 % \newcommand{\yf}[1]{{\color{red} YF: #1}}
 
 %\usepackage{minted}
@@ -140,50 +45,6 @@
 % defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
-%\settopmatter{printfolios=true,printacmref=false} % Removes citation information below abstract
-%\setcopyright{none}
-%\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
-% Rights management information. 
-% This information is sent to you when you complete the rights form.
-% These commands have SAMPLE values in them; it is your responsibility as an author to replace
-% the commands and values with those provided to you when you complete the rights form.
-%
-% These commands are for a PROCEEDINGS abstract or paper.
-%\copyrightyear{2018}
-%\acmYear{2018}
-%\setcopyright{acmlicensed}
-% \acmConference[PPoPP'26]{ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming}{January 31--February 04, 2026}{Sydney, Australia}
-% \acmYear{2026}
-% \acmConference[]{}{}
-\acmConference[ICS'2025]{The 39th ACM International Conference on
-  Supercomputing}{June 9--11, 2025}{Salt Lake City, USA}
-\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-% \startPage{1}
-\settopmatter{printacmref=false}
-
-\setcopyright{none}
-%
-% These commands are for a JOURNAL article.
-%\setcopyright{acmcopyright}
-%\acmJournal{TOG}
-%\acmYear{2018}\acmVolume{37}\acmNumber{4}\acmArticle{111}\acmMonth{8}
-%\acmDOI{10.1145/1122445.1122456}
-
-%
-% Submission ID. 
-% Use this when submitting an article to a sponsored event. You'll receive a unique submission ID from the organizers
-% of the event, and this ID should be used as the parameter to this command.
-%\acmSubmissionID{123-A56-BU3}
-
-%
-% The majority of ACM publications use numbered citations and references. If you are preparing content for an event
-% sponsored by ACM SIGGRAPH, you must use the "author year" style of citations and references. Uncommenting
-% the next command will enable that style.
-% \citestyle{acmauthoryear}
-%\hypersetup{draft}
-%
-% end of the preamble, start of the body of the document source.
 
 \begin{document}
 
@@ -212,7 +73,20 @@
 %% Many elements are not rendered, but should be provided for metadata
 %% extraction tools.
 
-\author{} %% fill in for the camera-ready version with the format commented out below
+\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
+Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
+Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+%
+\authorrunning{F. Author et al.}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+\institute{Princeton University, Princeton NJ 08544, USA \and
+Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
+\email{lncs@springer.com}\\
+\url{http://www.springer.com/gp/computer-science/lncs} \and
+ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+\email{\{abc,lncs\}@uni-heidelberg.de}}
 %% Author with single affiliation.
 % \author{First1 Last1}
 % \authornote{with author1 note}          %% \authornote is optional;
@@ -259,15 +133,14 @@
 % \email{first2.last2@inst2b.org}         %% \email is recommended
 
 
-%% Remove these two lines for the camera-ready version
-\fancyhead{}  % clears the header fields that trigger HotCRP format checker
-\renewcommand\footnotetextcopyrightpermission[1]{} % removes the ACM copyright footnote
 
+\maketitle
 %% Abstract
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
 	AlphaFold2 has achieved remarkable accuracy in protein structure prediction, yet its high computational and memory costs remain a significant barrier to large-scale deployment. While prior optimization efforts have been predominantly GPU-centric, the potential for CPU acceleration remains largely unexplored. This paper introduces MatrixFold, the first systematic study of quantized AlphaFold2 inference on a many-core CPU architecture. Targeting 72F processor with dedicated matrix units and on-package memory, we implement a series of computation and communication optimizations. These include highly optimized GEMM kernels, hardware-based communication mechanisms, and adaptive parallelism strategies to efficiently leverage the many-core resources. On CASP14 benchmarks, MatrixFold demonstrates high structural accuracy with TM-scores above 0.7. While its performance is comparable to GPU-based FastFold on short sequences, it shows a significant advantage on long sequences, achieving inference speedups of 1.2$\times$ to 3.2$\times$ over FastFold on the NVIDIA A800 GPU and 1.5$\times$ to 5.5$\times$ over Open-Omics-AlphaFold on Intel Xeon w9-3495X.
+\keywords{First keyword  \and Second keyword \and Another keyword.}
 \end{abstract}
 % \keywords{AlphaFold2, Protein Structure Prediction, Mixed-Precision Inference, Many-core CPU, Matrix Unit, Outer Product Unit}
 
@@ -276,7 +149,6 @@
 %% Note: \maketitle command must come after title commands, author
 %% commands, abstract environment, Computing Classification System
 %% environment and commands, and keywords command.
-\maketitle
 
 \input{introduction}
 \input{background}
@@ -289,6 +161,7 @@
 \input{relatedwork}
 \input{conclusion}
 
+\bibliographystyle{splncs04}
 %% Bibliography
 \bibliography{ref}
 
