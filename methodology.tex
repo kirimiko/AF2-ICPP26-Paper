@@ -68,20 +68,20 @@ Furthermore, the OPA array registers on 72F are partitioned differently dependin
 
 \subsection{Mixed Precision Strategy}
 
-For accelerating AlphaFold2 with a mixed precision strategy, we explore a FP32-FP16 mixed precision strategy (FP16 inference) and further aggressive partial INT8 quantization (INT8 quantization) to obtain performance gain with acceptable accuracy. Both strategies are implemented based on our high-performance GEMM kernels.
+For accelerating AlphaFold2 with a mixed precision strategy, we explore a FP32-FP16 mixed precision strategy to obtain performance gain with acceptable accuracy.
 
-\subsubsection{FP16 Inference}
+% \subsubsection{FP16 Inference}
 % 在AlphaFold中，不同模块的算子对精度的容忍度不同。有些模块对精度非常敏感，比如ExtraEvoformer中的Outer Product Means模块，这个模块即使只是略微降低精度，也会导致最终精度大幅下降，甚至产生NAN，因此我们对这类模块仍然使用FP32精度。除了Outer Product Means模块之外，对于Softmax我们也使用FP32进行计算。在Embedding模块和Evoformer模块中，除了这两类算子之外，我们均直接使用FP16精度进行计算。
 In the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
 
 Similarly, the Softmax function is known to be susceptible to numerical instability, particularly when implemented with lower precision formats, which can struggle to handle the wide dynamic range of inputs and may lead to overflow or underflow issues. To mitigate these risks and preserve the integrity of the probability distributions it computes, we also compute all Softmax operations in FP32. For the remaining operators within the Embedding and Evoformer modules, which are less sensitive to precision, we utilize FP16 precision for their computation. This mixed-precision approach allows for a significant reduction in computational overhead while selectively preserving high precision for the most critical calculations, thereby maintaining the overall accuracy and stability of the AlphaFold2 inference process.
-\subsubsection{INT8 Quantization}
-% AlphaFold2中激活内存占比极高，权重只占用很小一部分，因此量化的重点位于激活上。
-In our implementation, we adopt a post-training quantization approach. Static quantization is difficult to apply effectively in AlphaFold2, since the activation values exhibit significant variation across different input sequences. As a result, a dynamic strategy is more suitable.
+% \subsubsection{INT8 Quantization}
+% % AlphaFold2中激活内存占比极高，权重只占用很小一部分，因此量化的重点位于激活上。
+% In our implementation, we adopt a post-training quantization approach. Static quantization is difficult to apply effectively in AlphaFold2, since the activation values exhibit significant variation across different input sequences. As a result, a dynamic strategy is more suitable.
 
-Through experimentation, we observed that smoothing is not strictly necessary to achieve satisfactory accuracy. While applying a smoothing technique provides a marginal improvement, direct mapping quantization achieves comparable accuracy with lower complexity. Therefore, we adopt a direct mapping scheme.
+% Through experimentation, we observed that smoothing is not strictly necessary to achieve satisfactory accuracy. While applying a smoothing technique provides a marginal improvement, direct mapping quantization achieves comparable accuracy with lower complexity. Therefore, we adopt a direct mapping scheme.
 
-To further reduce the memory overhead introduced by quantization, we integrate the scale computation into the GEMM pipeline. Specifically, during the write-back stage of the current GEMM, we accumulate the maximum value of the output. This maximum value is then used as the scale for the quantization of the subsequent GEMM. By coupling scale estimation with write-back, we avoid additional memory traversals and effectively minimize quantization overhead.
+% To further reduce the memory overhead introduced by quantization, we integrate the scale computation into the GEMM pipeline. Specifically, during the write-back stage of the current GEMM, we accumulate the maximum value of the output. This maximum value is then used as the scale for the quantization of the subsequent GEMM. By coupling scale estimation with write-back, we avoid additional memory traversals and effectively minimize quantization overhead.
 
 % \subsection{Multiple Processes on Multi-NUMA Nodes}
 \subsection{Adaptive Numa-aware Parallelism}

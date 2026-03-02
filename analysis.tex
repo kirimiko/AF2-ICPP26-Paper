@@ -3,20 +3,20 @@
 Despite its algorithmic advances, AlphaFold2 exhibits several computational bottlenecks when executed on modern hardware. To systematically identify optimization opportunities, we analyze performance, memory, and communication characteristics using representative sequence lengths.
 
 % \subsection{GEMM Shape Analysis}
-\label{analysis:shape_dist}
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{figures/shape_dist.pdf}
-    \caption{Distribution of batched GEMM K dimensions in a iteration of AlphaFold2 inference. \textit{seq} represents the sequence length of the protein.}
-    \label{fig:k_dist}
-\end{figure}
+% \label{analysis:shape_dist}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{figures/shape_dist.pdf}
+%     \caption{Distribution of batched GEMM K dimensions in a iteration of AlphaFold2 inference. \textit{seq} represents the sequence length of the protein.}
+%     \label{fig:k_dist}
+% \end{figure}
 
-\textbf{\textit{GEMM Shape Analysis.}}
+% \textbf{\textit{GEMM Shape Analysis.}}
 % 作为Transformer-based模型，GEMM是AlphaFold2的核心计算单元，优化GEMM的性能对提高AlphaFold2推理速度至关重要。在GEMM的优化过程中，矩阵的形状对性能有显著影响。在72F平台上，使用外积指令计算GEMM的过程分为4个阶段：从内存加载数据、外积计算、从寄存器阵列取出外积结果以及将计算结果写回内存。相比于一般的CPU上的GEMM，72F上多了从寄存器阵列取出外积结果这一流程。每完成一次reduce操作，就需要将GEMM结果从寄存器阵列中取出，也即GEMM的K维度会影响外积指令与数据搬运指令的比例。当K较小时，相同数量的外积指令需要对应更多的数据搬运指令，此时数据搬运会成为瓶颈。而当K较大时，数据搬运指令的占比就会很小，此时GEMM kernel的性能取决于外积指令的性能。因此我们分析了AlphaFold2中各个GEMM的形状分布情况，以便为后续的GEMM优化提供指导。图~\ref{fig:k_dist}中展示了AlphaFold2中GEMM形状的分布。从统计结果中可以得出，在AlphaFold2中，K维度较小的GEMM占据了很大比例。
-Optimizing GEMM kernels is pivotal for AlphaFold2 inference. However, on the 72F platform, the unique overhead associated with draining the register array, a step absent in standard CPU executions, makes performance strictly dependent on the reduction dimension (K). The execution flow consists of loading, computing (via outer products), draining results, and writing back. Since the readout overhead is incurred per reduction operation, the arithmetic intensity drops significantly as K decreases.
-While large-K GEMMs are compute-bound, small-K kernels suffer from insufficient instruction-level parallelism to mask the data movement and readout latency, becoming severely bandwidth-bound. Our workload characterization of AlphaFold2 (Figure~\ref{fig:k_dist}) reveals a critical insight: the model is dominated by small-K GEMMs. This mismatch between the hardware's preference for large K and the workload's abundance of small K motivates our proposed optimizations.
-% 而且，K比较小并不意味着这些GEMM的计算量小。通常，这些K比较小的GEMM会有更大的M、N或batch维度，使它们的计算量接近甚至超过K更大的GEMM。
-Meanwhile, small K does not imply low computational load. These GEMMs often feature larger M, N, or batch dimensions, resulting in comparable or even greater total FLOPs than their large-K counterparts.
+% Optimizing GEMM kernels is pivotal for AlphaFold2 inference. However, on the 72F platform, the unique overhead associated with draining the register array, a step absent in standard CPU executions, makes performance strictly dependent on the reduction dimension (K). The execution flow consists of loading, computing (via outer products), draining results, and writing back. Since the readout overhead is incurred per reduction operation, the arithmetic intensity drops significantly as K decreases.
+% While large-K GEMMs are compute-bound, small-K kernels suffer from insufficient instruction-level parallelism to mask the data movement and readout latency, becoming severely bandwidth-bound. Our workload characterization of AlphaFold2 (Figure~\ref{fig:k_dist}) reveals a critical insight: the model is dominated by small-K GEMMs. This mismatch between the hardware's preference for large K and the workload's abundance of small K motivates our proposed optimizations.
+% % 而且，K比较小并不意味着这些GEMM的计算量小。通常，这些K比较小的GEMM会有更大的M、N或batch维度，使它们的计算量接近甚至超过K更大的GEMM。
+% Meanwhile, small K does not imply low computational load. These GEMMs often feature larger M, N, or batch dimensions, resulting in comparable or even greater total FLOPs than their large-K counterparts.
 
 
 % \subsection{Performance Breakdown}
