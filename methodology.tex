@@ -24,10 +24,10 @@ To mitigate this issue, we redesign the tensor layout to directly match the OPA 
 Converting between the conventional tensor layout and the OPA-specialized layout introduces large overhead. Therefore, we employ two complementary strategies.
 
 First, we design multiple variants of the GEMM kernel that support different output layouts. Depending on the operator configuration, a GEMM can directly write its results either in standard row-major format or in the OPA-compatible layout. This design eliminates the need for layout conversion between consecutive GEMM operations inside the Evoformer, thereby removing a substantial portion of the conversion overhead.
-Figure~\ref{fig:layout} (c) demonstrates how to make the GEMM output directly compatible with the next GEMM input in the OPA layout. \textit{st2} is an instruction that can store two vector registers into memory in an interleaved manner. By combining \textit{st2} with vertical or horizontal reads of the OPA array register, the GEMM output can be directly stored in the OPA layout.
+Figure~\ref{fig:layout} (c) demonstrates how to make the GEMM output directly compatible with the next GEMM input in the OPA layout. \textit{st2} is an instruction that can store two vector registers into memory in an interleaved manner. By combining \textit{st2} with vertical or horizontal reads of the ZA register, the GEMM output can be directly stored in the OPA layout.
 Moreover, since some GEMMs are separated by non-linear operators such as softmax, we additionally implement several auxiliary operators that operate directly on tensors stored in the OPA layout. This further reduces the number of layout transitions required within the Transformer stack.
 
-Second, we optimize the layout conversion procedure itself. By exploiting the structural properties of the OPA outer-product register array, we implement an efficient data transformation mechanism that leverages the array's vertical and horizontal load and store capabilities. This approach allows converting row-major tiles into the OPA-required interleaved format with significantly lower overhead than scalar or vectorized index-based implementations.
+Second, we optimize the layout conversion procedure itself. By exploiting the structural properties of the ZA registers, we implement an efficient data transformation mechanism that leverages the array's vertical and horizontal load and store capabilities. This approach allows converting row-major tiles into the OPA-required interleaved format with significantly lower overhead than scalar or vectorized index-based implementations.
 % Detailed optimization is discussed in Section~\ref{sec:optimizations:format_conversion}.
 
 
@@ -58,18 +58,18 @@ By exploiting ZA's native support for both horizontal and vertical accesses, thi
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/pack_sve.pdf}
-    \caption{Transformation by vector instructions or array register for FP16 OPA under vector length of 128-bits.}
+    \caption{Transformation by vector instructions or ZA register for FP16 OPA under vector length of 128-bits.}
     \label{fig:transformation}
 \end{figure}
 
 As illustrated in Fig.~\ref{fig:transformation}, taking a 128-bit vector length as an example under FP16 precision, each ZA register is treated as a vector register of 32-bit floating-point elements. In this representation, two consecutive FP16 elements remain adjacent in the final layout, satisfying the data alignment requirements of multi-lane accumulation. The transformation process consists of $VL_{32}$ horizontal writes followed by $VL_{32}$ vertical reads of ZA registers, enabling efficient data rearrangement with significantly fewer shuffle operations compared with conventional SIMD-based approaches.
 
 \textbf{Kernel Design.}
-In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit array registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these array registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
+In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit ZA registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these ZA registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
 
 In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs). If the GEMM were tiled along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
-Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than half of ZA registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available array registers for accumulation, ensuring maximal throughput across different precision settings.
+Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than half of ZA registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available ZA registers for accumulation, ensuring maximal throughput across different precision settings.
 
 % Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-tiling, memory access is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2's typical workloads.
 
