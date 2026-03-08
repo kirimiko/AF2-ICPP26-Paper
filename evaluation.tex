@@ -4,12 +4,13 @@
 % 我们的实验一共在两个Cluster上进行。在Cluster A上，我们在72F CPU上评估了MatrixFold的性能。同时，我们将Cluster B上运行的FastFold{\color{red}~\cite{}}作为我们的基线。每个Cluster的具体配置如表~\ref{tab:cluster}所示。
 We evaluate our optimizations on three distinct computing environments. The primary environment is a CPU cluster that serves as the optimization target of this work. The cluster is equipped with two 72F processors, each consisting of 8 NUMA nodes. Unless otherwise stated, all reported CPU results are obtained on a single 72F processor, which allows us to highlight the effectiveness of our optimizations without the influence of inter-socket communication overhead. This platform provides not only high computational throughput but also specialized matrix computation units, which we exploit to accelerate AlphaFold2 inference. Detailed hardware and software configurations are shown in Table~\ref{tab:cluster}.
 
-For comparison, we benchmark against FastFold~\cite{cheng2024fastfold} and Open-Omics-Alphafold~\cite{openomicsalphafold}, state-of-the-art accelerated implementations of AlphaFold2 on NVIDIA GPU and Intel CPU. FastFold experiments are conducted on a server equipped with two Intel(R) Xeon(R) Gold 6336Y processors and a single NVIDIA A800 GPU. Open-omics-alphafold experiments are conducted on a server with an Intel(R) Xeon(R) w9-3495X, which supports inference on AMX-bf16. These configurations represent the mainstream deployment setting for AlphaFold2 inference on GPUs and CPUs, providing a strong baseline to evaluate the competitiveness of our CPU-based optimizations.
+For comparison, we benchmark against Open-Omics-Alphafold~\cite{openomicsalphafold} and FastFold~\cite{cheng2024fastfold} , state-of-the-art accelerated implementations of AlphaFold2 on NVIDIA GPU and Intel CPU. FastFold experiments are conducted on a server equipped with two Intel(R) Xeon(R) Gold 6336Y processors and a single NVIDIA A800 GPU. Open-omics-alphafold experiments are conducted on a server with an Intel(R) Xeon(R) w9-3495X, which supports inference on AMX-bf16. These configurations represent the mainstream deployment setting for AlphaFold2 inference on GPUs and CPUs and their peak performance is similar to 72F CPU, providing a strong baseline to evaluate the competitiveness of our CPU-based optimizations.
 
-Our evaluation dataset consists primarily of protein sequences from CASP14, which is widely adopted as a standard benchmark for protein structure prediction. Using CASP14 ensures that our results are comparable with prior studies and faithfully reflect AlphaFold2's predictive capability under realistic inference workloads.
+% Our evaluation dataset consists primarily of protein sequences from CASP14, which is widely adopted as a standard benchmark for protein structure prediction. Using CASP14 ensures that our results are comparable with prior studies and faithfully reflect AlphaFold2's predictive capability under realistic inference workloads.
 
-It is worth noting that our optimized implementation achieves inference performance on a single 72F processor that matches or even surpasses that of an A800 GPU running FastFold, highlighting the potential of CPU-based acceleration with matrix units and quantization techniques.
+It is worth noting that our optimized implementation achieves inference performance on a single 72F processor that matches or even surpasses that of an A800 GPU running FastFold, highlighting the potential of CPU-based acceleration with matrix units and mixed-precision techniques.
 \begin{table}
+    \footnotesize
     \caption{Cluster Configuration}
     \label{tab:cluster}%
     \centering
@@ -82,11 +83,11 @@ Overall, these results demonstrate that the observed speedup trends are closely 
 
 % We further analyze the performance difference between the INT8 and FP16 variants of MatrixFold. As discussed in Section~\ref{sec:evaluation:sensitivity} and illustrated by the matrix shape distribution in Section~\ref{analysis:shape_dist}, the effectiveness of INT8 quantization in AlphaFold inference is fundamentally constrained by the characteristics of the underlying matrix operations. In particular, the majority of matrix multiplications exhibit relatively small values of the reduction dimension K, which limits the achievable computational intensity. Under such conditions, INT8 execution is unable to fully amortize the overhead of quantization and dequantization, resulting in limited performance benefits over FP16.
 
-For short sequence lengths, most intermediate activations reside within on-chip memory. In this regime, memory access latency is low, and quantization introduces only modest additional overhead. Consequently, the INT8 and FP16 implementations exhibit similar performance, with neither precision format demonstrating a clear advantage.
+% For short sequence lengths, most intermediate activations reside within on-chip memory. In this regime, memory access latency is low, and quantization introduces only modest additional overhead. Consequently, the INT8 and FP16 implementations exhibit similar performance, with neither precision format demonstrating a clear advantage.
 
-As the sequence length increases, the size of intermediate activations grows accordingly and eventually exceeds the capacity of on-chip memory. This leads to frequent accesses to off-chip memory and amplifies the cost associated with quantization, including data layout transformations and scaling operations. %Since the computational workload remains dominated by small-K matrix operations, the reduced arithmetic cost of INT8 is insufficient to offset the increased overhead. As a result, the INT8 variant experiences a more pronounced performance degradation relative to FP16 in the long-sequence regime.
+% As the sequence length increases, the size of intermediate activations grows accordingly and eventually exceeds the capacity of on-chip memory. This leads to frequent accesses to off-chip memory and amplifies the cost associated with quantization, including data layout transformations and scaling operations. %Since the computational workload remains dominated by small-K matrix operations, the reduced arithmetic cost of INT8 is insufficient to offset the increased overhead. As a result, the INT8 variant experiences a more pronounced performance degradation relative to FP16 in the long-sequence regime.
 
-These results indicate that, for AlphaFold inference, the benefits of INT8 quantization are highly sensitive to both matrix shape characteristics and memory behavior. When matrix operations are dominated by small reduction dimensions and activations fit within on-chip memory, INT8 and FP16 deliver comparable performance. However, as memory pressure increases with longer sequences, the overhead of quantization becomes a limiting factor, making FP16 a more robust choice for sustained performance.
+% These results indicate that, for AlphaFold inference, the benefits of INT8 quantization are highly sensitive to both matrix shape characteristics and memory behavior. When matrix operations are dominated by small reduction dimensions and activations fit within on-chip memory, INT8 and FP16 deliver comparable performance. However, as memory pressure increases with longer sequences, the overhead of quantization becomes a limiting factor, making FP16 a more robust choice for sustained performance.
 
 % Figure~\ref{fig:endtoend} presents the average inference latency and speedup across all sequences.
 % MatrixFold consistently achieves lower latency than Open-Omics AlphaFold and FastFold across all evaluated sequence lengths. This advantage translates into stable and substantial speedups, indicating that the observed performance gains are not confined to specific input sizes but persist throughout both short- and long-sequence regimes.
@@ -149,48 +150,48 @@ These results indicate that, for AlphaFold inference, the benefits of INT8 quant
 
 % These results confirm that quantization directly accelerates the most critical kernel in AlphaFold2, which in turn translates into substantial end-to-end performance improvements. Moreover, the consistent scalability of INT8 attention kernels across diverse input shapes demonstrates the robustness of our optimization approach to real-world protein sequence variability.
 
-\subsection{Performance of Different Pack Strategies}
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.6\linewidth]{figures/pack_performance.pdf}
-    \caption{Impact of different pack strategies on GEMM performance. M = 1024, K = 128.}
-    \label{fig:pack_strategy}
-\end{figure}
-To evaluate the effectiveness of our proposed packing strategies, we conduct a series of microbenchmarks measuring the performance of GEMM operations under different packing configurations. Figure~\ref{fig:pack_strategy} presents the results, comparing three packing strategies: scalar packing, vector packing, and register-array packing. The benchmarks are performed on representative GEMM shapes commonly encountered in AlphaFold2 inference.
+% \subsection{Performance of Different Pack Strategies}
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.6\linewidth]{figures/pack_performance.pdf}
+%     \caption{Impact of different pack strategies on GEMM performance. M = 1024, K = 128.}
+%     \label{fig:pack_strategy}
+% \end{figure}
+% To evaluate the effectiveness of our proposed packing strategies, we conduct a series of microbenchmarks measuring the performance of GEMM operations under different packing configurations. Figure~\ref{fig:pack_strategy} presents the results, comparing three packing strategies: scalar packing, vector packing, and register-array packing. The benchmarks are performed on representative GEMM shapes commonly encountered in AlphaFold2 inference.
 
-As shown in Fig.~\ref{fig:pack_strategy}, the register-array-based packing strategy achieves the best performance. However, when the matrix size is small, the overhead of packing becomes a significant fraction of the total computation. In AlphaFold, a large number of batched GEMM operations are performed with large batch sizes but relatively small matrices, which amplifies the packing overhead and consequently degrades overall performance.
+% As shown in Fig.~\ref{fig:pack_strategy}, the register-array-based packing strategy achieves the best performance. However, when the matrix size is small, the overhead of packing becomes a significant fraction of the total computation. In AlphaFold, a large number of batched GEMM operations are performed with large batch sizes but relatively small matrices, which amplifies the packing overhead and consequently degrades overall performance.
 % As shown in figure~\ref{fig:pack_strategy}, 基于register-array的pack的性能最高。当矩阵规模较小时，pack的开销占比较大，而在AlphaFold中存在大量batch gemm，其batch较大而矩阵较小，因此会导致pack的开销较大，进而影响整体性能。
 
 \subsection{Accuracy Analysis}
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/result_pdb.pdf}
-    \caption{TM-score of FP16 and INT8 inference on CASP14 dataset.}
+    \caption{TM-score of all models on CASP14 dataset.}
     \label{fig:tmscore}
 \end{figure*}
 
-\begin{figure}[t]
-    \centering
-    \begin{minipage}[b]{0.29\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/T1024_fp16.png}
-        % \caption{(a) FP16 vs Real Structure.}
-    \end{minipage}
-    \begin{minipage}[b]{0.29\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/T1024_int8.png}
-        % \caption{(b) INT8 vs Real Structure.}
-    \end{minipage}
-    \caption{Visual comparison of predicted structures for sequence T1024 under different precisions. Left is FP16 and right is INT8.}
-    \label{fig:visual_compare}
-\end{figure}
+% \begin{figure}[t]
+%     \centering
+%     \begin{minipage}[b]{0.29\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{figures/T1024_fp16.png}
+%         % \caption{(a) FP16 vs Real Structure.}
+%     \end{minipage}
+%     \begin{minipage}[b]{0.29\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{figures/T1024_int8.png}
+%         % \caption{(b) INT8 vs Real Structure.}
+%     \end{minipage}
+%     \caption{Visual comparison of predicted structures for sequence T1024 under different precisions. Left is FP16 and right is INT8.}
+%     \label{fig:visual_compare}
+% \end{figure}
 % 我们使用了CASP14中的所有数据对比了int8、fp16以及fp32精度下的AlphaFold2的预测精度。我们选用的评估标准为TM-Score
-To assess the impact of quantization on prediction accuracy, we adopt TM-score~\cite{zhang2004scoring} as the evaluation metric. TM-score is a widely used measure to quantify the structural similarity between two protein conformations, with values ranging from 0 to 1. A higher TM-score indicates greater similarity, and scores above 0.5 are generally considered to represent the same overall fold, while scores above 0.7 are typically regarded as highly reliable in structural biology studies.~\cite{xu2010significant} The TM-score of two structures can be calculated using the TM-align tool~\cite{zhang2005tm}.
-In our evaluation, we use the FP32 version of AlphaFold2 predictions as the reference baseline. Other models are evaluated by aligning their predicted protein structures against the original FP32 results using the TM-align tool, after which TM-scores are computed.
+To assess the prediction accuracy of MatrixFold, we adopt TM-score~\cite{zhang2004scoring} as the evaluation metric. TM-score is a widely used measure to quantify the structural similarity between two protein conformations, with values ranging from 0 to 1. A higher TM-score indicates greater similarity, and scores above 0.5 are generally considered to represent the same overall fold, while scores above 0.7 are typically regarded as highly reliable in structural biology studies.~\cite{xu2010significant} The TM-score of two structures can be calculated using the TM-align tool~\cite{zhang2005tm}.
+In our evaluation, we use the FP32 version of AlphaFold2 predictions as the reference. Other models are evaluated by aligning their predicted protein structures against the original FP32 results using the TM-align tool, after which TM-scores are computed.
 
-Figure~\ref{fig:tmscore} presents the TM-scores of predictions on a representative dataset from CASP14~\cite{casp14}, comparing FP16 and INT8 models against the FP32 baseline. The evaluation dataset contains real protein sequences of varying lengths, ensuring the validity of the results. The results show that MatrixFold predictions maintain TM-scores well above 0.7 for the vast majority of sequences, indicating that the reduced precision does not compromise the reliability of structural predictions.
+Figure~\ref{fig:tmscore} presents the TM-scores of predictions on a representative dataset from CASP14~\cite{casp14}, comparing all models against the FP32 baseline. The evaluation dataset contains real protein sequences of varying lengths, ensuring the validity of the results. The results show that MatrixFold predictions maintain TM-scores well above 0.7 for the vast majority of sequences, indicating that the reduced precision does not compromise the reliability of structural predictions.
 % 可以看出，在FP16下，预测的结构与真实结构高度一致，其二级结构等细节也得到了很好的保留。在INT8下，虽然原子结构与真实结构相比较为接近，但预测的结构细节保持较差，基本无法识别明显的二级结构。
-These results confirm that our mixed-precision strategy preserves the accuracy of AlphaFold2 while improving inference efficiency under FP16 precision. %In particular, the INT8 quantized model achieves reliable structural predictions comparable to FP16 and FP32, thereby validating the feasibility of low-precision execution on CPU matrix units.
+% These results confirm that our mixed-precision strategy preserves the accuracy of AlphaFold2 while improving inference efficiency under FP16 precision. %In particular, the INT8 quantized model achieves reliable structural predictions comparable to FP16 and FP32, thereby validating the feasibility of low-precision execution on CPU matrix units.
 
 
 \subsection{Scalability Evaluation}
@@ -200,13 +201,12 @@ These results confirm that our mixed-precision strategy preserves the accuracy o
     \caption{Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.}
     \label{fig:scala}
 \end{figure*}
-To further assess the scalability of our optimized CPU implementation, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying both the input sequence length and the numerical precision (FP16, INT8). We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
+To further assess the scalability of MatrixFold, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying the input sequence length. We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
 
 Figure~\ref{fig:scala} presents the scalability curves. When sequence lengths are large, we observe that the inference time decreases with the number of NUMA nodes increasing, indicating good parallel efficiency of our implementation.
 % 从图中可以得出，随着序列长度的增加，我们可以观测到FP16与INT8的性能由接近开始变为FP16优于INT8。这里的原因与~\ref{sec:end_to_end}中提到的一致，当序列长度增加时，矩阵规模变大，而在进行GEMM之前的量化算子需要遍历整个矩阵，这破坏了空间局部性。
-From the figure, it can be observed that as the sequence length increases, the performance of FP16, which is initially comparable, diverges, with FP16 outperforming INT8. The underlying reason is consistent with the discussion in Section~\ref{sec:end_to_end}: as the sequence length grows, the matrix size becomes larger, and the quantization operator must traverse the entire matrix before GEMM, thereby disrupting spatial locality. With a sequence length of 512, the performance of 8 NUMA is worst. This is because  the workload is insufficient to fully utilize all NUMA nodes, leading to increased communication overhead that outweighs the benefits of parallelism.
-
+% From the figure, it can be observed that as the sequence length increases, the performance of FP16, which is initially comparable, diverges, with FP16 outperforming INT8. The underlying reason is consistent with the discussion in Section~\ref{sec:end_to_end}: as the sequence length grows, the matrix size becomes larger, and the quantization operator must traverse the entire matrix before GEMM, thereby disrupting spatial locality. 
+With a sequence length of 512, the performance of 8 NUMA is worst. This is because  the workload is insufficient to fully utilize all NUMA nodes, leading to increased communication overhead that outweighs the benefits of parallelism.
 % Importantly, the scalability trends remain stable across different sequence lengths, demonstrating that our NUMA-aware design generalizes well to diverse input sizes. For long sequences, the combination of INT8 quantization and full 8-NUMA parallelism yields the highest throughput, making it feasible to process even challenging CASP14 targets entirely on CPUs with competitive latency.
-
 These results validate that our approach not only improves single-threaded and single-NUMA performance but also scales efficiently across the entire socket, enabling flexible resource allocation depending on the workload and system constraints.
 

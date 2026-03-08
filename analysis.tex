@@ -1,35 +1,55 @@
-\section{Bottlenecks Analysis}
+% \section{Bottlenecks Analysis}
+% \label{sec:analysis}
+% Despite its algorithmic advances, AlphaFold2 exhibits several computational bottlenecks when executed on modern hardware. To systematically identify optimization opportunities, we analyze performance, memory, and communication characteristics using representative sequence lengths.
+
+% % \subsection{GEMM Shape Analysis}
+% % \label{analysis:shape_dist}
+% % \begin{figure}
+% %     \centering
+% %     \includegraphics[width=\linewidth]{figures/shape_dist.pdf}
+% %     \caption{Distribution of batched GEMM K dimensions in a iteration of AlphaFold2 inference. \textit{seq} represents the sequence length of the protein.}
+% %     \label{fig:k_dist}
+% % \end{figure}
+
+% % \textbf{\textit{GEMM Shape Analysis.}}
+% % 作为Transformer-based模型，GEMM是AlphaFold2的核心计算单元，优化GEMM的性能对提高AlphaFold2推理速度至关重要。在GEMM的优化过程中，矩阵的形状对性能有显著影响。在72F平台上，使用外积指令计算GEMM的过程分为4个阶段：从内存加载数据、外积计算、从寄存器阵列取出外积结果以及将计算结果写回内存。相比于一般的CPU上的GEMM，72F上多了从寄存器阵列取出外积结果这一流程。每完成一次reduce操作，就需要将GEMM结果从寄存器阵列中取出，也即GEMM的K维度会影响外积指令与数据搬运指令的比例。当K较小时，相同数量的外积指令需要对应更多的数据搬运指令，此时数据搬运会成为瓶颈。而当K较大时，数据搬运指令的占比就会很小，此时GEMM kernel的性能取决于外积指令的性能。因此我们分析了AlphaFold2中各个GEMM的形状分布情况，以便为后续的GEMM优化提供指导。图~\ref{fig:k_dist}中展示了AlphaFold2中GEMM形状的分布。从统计结果中可以得出，在AlphaFold2中，K维度较小的GEMM占据了很大比例。
+% % Optimizing GEMM kernels is pivotal for AlphaFold2 inference. However, on the 72F platform, the unique overhead associated with draining the register array, a step absent in standard CPU executions, makes performance strictly dependent on the reduction dimension (K). The execution flow consists of loading, computing (via outer products), draining results, and writing back. Since the readout overhead is incurred per reduction operation, the arithmetic intensity drops significantly as K decreases.
+% % While large-K GEMMs are compute-bound, small-K kernels suffer from insufficient instruction-level parallelism to mask the data movement and readout latency, becoming severely bandwidth-bound. Our workload characterization of AlphaFold2 (Figure~\ref{fig:k_dist}) reveals a critical insight: the model is dominated by small-K GEMMs. This mismatch between the hardware's preference for large K and the workload's abundance of small K motivates our proposed optimizations.
+% % % 而且，K比较小并不意味着这些GEMM的计算量小。通常，这些K比较小的GEMM会有更大的M、N或batch维度，使它们的计算量接近甚至超过K更大的GEMM。
+% % Meanwhile, small K does not imply low computational load. These GEMMs often feature larger M, N, or batch dimensions, resulting in comparable or even greater total FLOPs than their large-K counterparts.
+
+
+% % \subsection{Performance Breakdown}
+% \textbf{\textit{Performance Breakdown.}}
+% We first profile AlphaFold2 on a sequence of length $N_s = 1024$, which is a representative workload for practical inference. The computational time is dominated by the \textbf{Evoformer} module, which accounts for approximately \textbf{75\%} of the total execution time. The \textbf{Structure module} contributes around \textbf{13\%}, while the \textbf{Embedding stage} is relatively lightweight at \textbf{11\%}.
+% This breakdown highlights two important characteristics. First, the Evoformer block, composed primarily of attention and triangular update operations, is the key optimization target, as improvements here directly translate into overall performance gains. Second, although the Structure and Embedding modules are less dominant, they remain non-negligible for end-to-end efficiency, especially on CPU platforms where pipeline imbalance may exacerbate idle times.
+
+% % \subsection{Memory Analysis}
+% \textbf{\textit{Memory Analysis.}}
+% The memory footprint of AlphaFold2 is primarily determined by attention activations. For single-sequence attention, the input activations scale as $O(N_s \times N_r)$, while for pairwise attention they scale as $O(N_r^2)$, where $N_s$ denotes sequence length and $N_r$ denotes residue count. The hidden dimension in these modules is relatively modest, typically 128 or 256, which means that model weights occupy only a small fraction of memory. In contrast, activations grow quadratically with sequence length, and thus dominate memory usage.
+% A further challenge arises from the computation of attention logits. For single-sequence attention, the logits scale as $O(N_s \times N_r^2)$, whereas for pairwise attention they scale as $O(N_r^3)$. Such growth can quickly exceed practical memory limits, especially on GPUs with fixed HBM capacity. To mitigate this, AlphaFold2 employs chunking~\cite{liu2022swin,kitaev2020reformer} strategies to partition computations into smaller tiles. While chunking reduces peak memory consumption, it also decreases parallelism and may negatively impact throughput, particularly when implemented on hardware platforms with high parallel capacity such as GPUs. On CPUs with large memory capacity, however, larger chunk sizes can often be maintained, avoiding these trade-offs.
+
+% % \subsection{Communication Analysis}
+% \textbf{\textit{Communication Analysis.}}
+% Another major bottleneck in AlphaFold2 arises from communication overheads. To enforce the physical plausibility of the protein structure, AlphaFold2 interleaves different types of attention and pairwise updates, many of which require switching tensor layouts. For example, intra-chain and inter-chain attention operate on different axes of the same tensor, leading to repeated transpose operations. These operations require frequent tensor transpositions to convert between row-major and column-major layouts of activations. Since AlphaFold2 parallelizes primarily along the sequence or residue dimensions ($N_s$ or $N_r$), every transposition following an attention step introduces a synchronization barrier across parallel workers. In Figure~\ref{fig:af2model}, the transposition is denoted by \textit{T}, and \textit{T'} represents an equivalent transposition operation.
+% Consequently, the Evoformer incurs a large number of communication events, particularly when executed on many-core architectures. Each of these events involves data movement across NUMA domains or across nodes in a distributed setup, introducing latency and bandwidth pressure. As sequence lengths increase, the cost of these transpositions grows super-linearly with activation size, making communication one of the most significant bottlenecks for scaling AlphaFold2.
+
+\section{AlphaFold2 Characteristics and Bottleneck Analysis}
 \label{sec:analysis}
-Despite its algorithmic advances, AlphaFold2 exhibits several computational bottlenecks when executed on modern hardware. To systematically identify optimization opportunities, we analyze performance, memory, and communication characteristics using representative sequence lengths.
 
-% \subsection{GEMM Shape Analysis}
-% \label{analysis:shape_dist}
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=\linewidth]{figures/shape_dist.pdf}
-%     \caption{Distribution of batched GEMM K dimensions in a iteration of AlphaFold2 inference. \textit{seq} represents the sequence length of the protein.}
-%     \label{fig:k_dist}
-% \end{figure}
+\begin{figure*}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/AlphaFold.pdf}
+    \caption{AlphaFold2 Model Architecture}
+    \label{fig:af2model}
+\end{figure*}
 
-% \textbf{\textit{GEMM Shape Analysis.}}
-% 作为Transformer-based模型，GEMM是AlphaFold2的核心计算单元，优化GEMM的性能对提高AlphaFold2推理速度至关重要。在GEMM的优化过程中，矩阵的形状对性能有显著影响。在72F平台上，使用外积指令计算GEMM的过程分为4个阶段：从内存加载数据、外积计算、从寄存器阵列取出外积结果以及将计算结果写回内存。相比于一般的CPU上的GEMM，72F上多了从寄存器阵列取出外积结果这一流程。每完成一次reduce操作，就需要将GEMM结果从寄存器阵列中取出，也即GEMM的K维度会影响外积指令与数据搬运指令的比例。当K较小时，相同数量的外积指令需要对应更多的数据搬运指令，此时数据搬运会成为瓶颈。而当K较大时，数据搬运指令的占比就会很小，此时GEMM kernel的性能取决于外积指令的性能。因此我们分析了AlphaFold2中各个GEMM的形状分布情况，以便为后续的GEMM优化提供指导。图~\ref{fig:k_dist}中展示了AlphaFold2中GEMM形状的分布。从统计结果中可以得出，在AlphaFold2中，K维度较小的GEMM占据了很大比例。
-% Optimizing GEMM kernels is pivotal for AlphaFold2 inference. However, on the 72F platform, the unique overhead associated with draining the register array, a step absent in standard CPU executions, makes performance strictly dependent on the reduction dimension (K). The execution flow consists of loading, computing (via outer products), draining results, and writing back. Since the readout overhead is incurred per reduction operation, the arithmetic intensity drops significantly as K decreases.
-% While large-K GEMMs are compute-bound, small-K kernels suffer from insufficient instruction-level parallelism to mask the data movement and readout latency, becoming severely bandwidth-bound. Our workload characterization of AlphaFold2 (Figure~\ref{fig:k_dist}) reveals a critical insight: the model is dominated by small-K GEMMs. This mismatch between the hardware's preference for large K and the workload's abundance of small K motivates our proposed optimizations.
-% % 而且，K比较小并不意味着这些GEMM的计算量小。通常，这些K比较小的GEMM会有更大的M、N或batch维度，使它们的计算量接近甚至超过K更大的GEMM。
-% Meanwhile, small K does not imply low computational load. These GEMMs often feature larger M, N, or batch dimensions, resulting in comparable or even greater total FLOPs than their large-K counterparts.
+AlphaFold2 predicts the three-dimensional structure of a protein from its amino acid sequence with near-experimental accuracy~\cite{jumper2021highly}. As illustrated in Figure~\ref{fig:af2model}, the model consists of three major components: input representation, Evoformer, and the structure module. The input stage generates sequence and pairwise embeddings from the protein sequence and its multiple sequence alignment (MSA). The Evoformer iteratively refines these embeddings using a stack of transformer-like blocks, while the structure module converts the refined representations into 3D atomic coordinates.
 
+From a systems perspective, the Evoformer dominates the overall workload. Profiling with a representative sequence length of $N_s = 1024$ shows that Evoformer accounts for approximately \textbf{75\%} of the total execution time, while the structure module and embedding stage contribute around \textbf{13\%} and \textbf{11\%}, respectively. Since Evoformer is primarily composed of attention mechanisms and triangular updates implemented with dense tensor operations, the performance of AlphaFold2 heavily depends on the efficiency of matrix multiplications and memory bandwidth.
 
-% \subsection{Performance Breakdown}
-\textbf{\textit{Performance Breakdown.}}
-We first profile AlphaFold2 on a sequence of length $N_s = 1024$, which is a representative workload for practical inference. The computational time is dominated by the \textbf{Evoformer} module, which accounts for approximately \textbf{75\%} of the total execution time. The \textbf{Structure module} contributes around \textbf{13\%}, while the \textbf{Embedding stage} is relatively lightweight at \textbf{11\%}.
-This breakdown highlights two important characteristics. First, the Evoformer block, composed primarily of attention and triangular update operations, is the key optimization target, as improvements here directly translate into overall performance gains. Second, although the Structure and Embedding modules are less dominant, they remain non-negligible for end-to-end efficiency, especially on CPU platforms where pipeline imbalance may exacerbate idle times.
+AlphaFold2 also exhibits a distinctive memory behavior. Unlike large NLP models, its hidden dimensions are relatively small (typically 128 or 256), resulting in a modest model size. Instead, the memory footprint is dominated by activations. The MSA representation scales as $O(N_s N_r)$, while pairwise representations scale as $O(N_r^2)$. Moreover, attention logits($Q\times K^T$ in attention) may grow as $O(N_s N_r^2)$ or $O(N_r^3)$ depending on the attention type. To control memory usage, AlphaFold2 commonly adopts chunking strategies that partition large attention computations into smaller tiles. Although chunking reduces peak memory usage, it may limit available parallelism and reduce throughput.
 
-% \subsection{Memory Analysis}
-\textbf{\textit{Memory Analysis.}}
-The memory footprint of AlphaFold2 is primarily determined by attention activations. For single-sequence attention, the input activations scale as $O(N_s \times N_r)$, while for pairwise attention they scale as $O(N_r^2)$, where $N_s$ denotes sequence length and $N_r$ denotes residue count. The hidden dimension in these modules is relatively modest, typically 128 or 256, which means that model weights occupy only a small fraction of memory. In contrast, activations grow quadratically with sequence length, and thus dominate memory usage.
-A further challenge arises from the computation of attention logits. For single-sequence attention, the logits scale as $O(N_s \times N_r^2)$, whereas for pairwise attention they scale as $O(N_r^3)$. Such growth can quickly exceed practical memory limits, especially on GPUs with fixed HBM capacity. To mitigate this, AlphaFold2 employs chunking~\cite{liu2022swin,kitaev2020reformer} strategies to partition computations into smaller tiles. While chunking reduces peak memory consumption, it also decreases parallelism and may negatively impact throughput, particularly when implemented on hardware platforms with high parallel capacity such as GPUs. On CPUs with large memory capacity, however, larger chunk sizes can often be maintained, avoiding these trade-offs.
+Another important bottleneck arises from communication overhead. The Evoformer frequently alternates between operations along different tensor dimensions, such as intra-chain and inter-chain attention. These operations require repeated tensor transpositions to switch between row-major and column-major layouts of activations, as illustrated by the transpose operations ($T$ and $T'$) in Figure~\ref{fig:af2model}. When parallelized along sequence or residue dimensions, such transpositions introduce synchronization barriers and data movement across processing units. On many-core architectures, this leads to substantial communication overhead, especially for long sequences where activation tensors become large.
 
-% \subsection{Communication Analysis}
-\textbf{\textit{Communication Analysis.}}
-Another major bottleneck in AlphaFold2 arises from communication overheads. To enforce the physical plausibility of the protein structure, AlphaFold2 interleaves different types of attention and pairwise updates, many of which require switching tensor layouts. For example, intra-chain and inter-chain attention operate on different axes of the same tensor, leading to repeated transpose operations. These operations require frequent tensor transpositions to convert between row-major and column-major layouts of activations. Since AlphaFold2 parallelizes primarily along the sequence or residue dimensions ($N_s$ or $N_r$), every transposition following an attention step introduces a synchronization barrier across parallel workers. In Figure~\ref{fig:af2model}, the transposition is denoted by \textit{T}, and \textit{T'} represents an equivalent transposition operation.
-Consequently, the Evoformer incurs a large number of communication events, particularly when executed on many-core architectures. Each of these events involves data movement across NUMA domains or across nodes in a distributed setup, introducing latency and bandwidth pressure. As sequence lengths increase, the cost of these transpositions grows super-linearly with activation size, making communication one of the most significant bottlenecks for scaling AlphaFold2.
+In summary, AlphaFold2 is characterized by three major system challenges: (1) compute-intensive dense linear algebra dominated by Evoformer, (2) activation-dominated memory usage with quadratic or cubic scaling, and (3) frequent tensor layout transformations that introduce communication overhead. These characteristics motivate the optimization strategies presented in the following sections.

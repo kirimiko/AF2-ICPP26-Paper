@@ -1,14 +1,16 @@
-\section{Background}
+% \section{Background}
+\section{The Architecture of 72F CPU}
 \label{sec:background}
-\subsection{The Architecture of 72F CPU}
+% \subsection{The Architecture of 72F CPU}
 % 72F CPU提供了OPA(Outer-Product Accumulator)以及配套的向量指令用于加速矩阵计算。72F使用一个array register来存储外积计算的结果，该array register可以被拆分为1个8-bits元素、2个16-bits元素、4个32-bits元素或8个64-bits元素的寄存器。对于每种数据类型，array register均含有VL(vector lenght) $\times$ VL个元素。OPA指令从将两个向量寄存器中的向量做外积，并累加到相应精度的array register上。72F 提供了int8、fp16、fp32、fp64的OPA指令。int8的OPA指令会将输入寄存器划分为4个向量，并在int32精度的array register上累加4组外积的结果。fp16的OPA指令会将输入寄存器划分为两个向量，并在fp32精度的array register上累加2组外积的结果。fp32与fp64则是直接在相应精度的array register上累加一组外积的结果。对于fp16(int8)的OPA指令，72F要求同一个输入寄存器内的向量是交织的，也即每个外积向量的元素索引之差为2(4)。
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.3\linewidth]{figures/opa_new.pdf}
-    \caption{4-way Outer-Product Accumulator (OPA) Instruction on 72F CPU}
+    \includegraphics[width=0.5\linewidth]{figures/opa_2way.pdf}
+    \caption{2-way OPA Instruction on 72F CPU}
     \label{fig:opa}
 \end{figure}
+
 
 
 % The 72F CPU incorporates an Outer-Product Accumulator (OPA) together with dedicated vector instructions for accelerating matrix computations. As shown in Figure~\ref{fig:opa}, the OPA employs a specialized array register to store intermediate results, which can be interpreted as a register containing 8-bit elements, two registers containing 16-bit elements, four registers containing 32-bit elements, or eight registers containing 64-bit elements. For each data type, the array register provides VL (vector length) $\times$ VL elements.
@@ -17,24 +19,19 @@
 
 % For fp16 and int8 OPAs, input registers are required to contain interleaved vectors, such that the index distance between consecutive outer-product elements is 2 for fp16 and 4 for int8.
 
-The 72F processor is an ARM CPU equipped with the SME. SME extends the AArch64 architecture with a two-dimensional matrix register file (ZA registers) and dedicated outer-product execution units, enabling high-throughput matrix operations with hardware-managed accumulation.
+The 72F processor is an ARM CPU equipped with the SME. SME extends the AArch64 architecture with a two-dimensional matrix register file (ZA registers) and dedicated outer-product execution units, enabling high-throughput outer-product accumulation (OPA) operations with hardware-managed accumulation.
 
 Unlike traditional fixed-length vector registers, ZA is logically partitioned into independent accumulator tiles. The number of logical tiles depends on the element precision: narrower data types provide more tiles, while wider types reduce the number of tiles due to fixed physical storage capacity. In this work, we focus on FP32 and FP16 computation modes.
 
-SME supports orthogonal access to the matrix register. Accumulator tiles can be accessed either by rows or by columns without explicit data rearrangement in software. This orthogonal addressing eliminates the need for software-level matrix transposition and enables efficient data reuse across different tensor dimensions, which is particularly beneficial for GEMM-like kernels.
+SME provides orthogonal access to the matrix register, allowing accumulator tiles to be accessed by either rows or columns without explicit data rearrangement. This eliminates software-level matrix transposition and improves data reuse across tensor dimensions, which is particularly beneficial for GEMM-like kernels.
 
-Computation in SME is driven by a hardware outer-product unit. Rather than performing scalar fused multiply-add operations element by element, SME updates the accumulator tile using vector outer products. Given a horizontal source vector $u$ and a vertical source vector $v$, the hardware computes their outer product and accumulates the result into the destination tile:
+Computation in SME is driven by a hardware outer-product unit. Given a horizontal source vector $u$ and a vertical source vector $v$, the hardware computes their outer product and accumulates the result into the destination tile:
 $$
     D \leftarrow D + (u \otimes v)
 $$
 where $D$ denotes the FP32 accumulator tile.
 
-For FP32 workloads, both input vectors and the accumulator tile use single precision. Each outer-product instruction multiplies elements from the horizontal and vertical FP32 vectors and accumulates the products directly into the FP32 tile.
-
-For FP16 workloads, SME employs a widening outer-product mechanism. The input vectors are stored in FP16 format, while accumulation is performed in FP32 precision to improve numerical robustness. In this mode, the hardware performs a two-lane outer-product aggregation per instruction: pairs of adjacent FP16 elements are multiplied and accumulated into FP32 accumulators. This design increases floating-point throughput compared to pure FP32 operation while preserving numerical stability through precision widening.
-
-By combining a two-dimensional accumulator register file, orthogonal row/column access, and precision-widening outer-product units, the SME-enabled 72F CPU efficiently supports both FP32 and FP16 matrix-intensive workloads.
-
+For FP32 workloads, both input vectors and accumulators use single precision. For FP16 workloads, SME employs widening outer-product operations in which FP16 inputs are multiplied and accumulated into FP32 accumulators. Each instruction performs a two-way accumulation: pairs of adjacent FP16 elements are multiplied independently and accumulated into FP32 elements of the tile, increasing floating-point throughput compared with FP32 execution while preserving numerical robustness.
 
 % For quantized integer inference, the architecture leverages the reduced bit-width to perform a \textit{4-way outer product} ($K=4$), as illustrated in Figure~\ref{fig:opa}.
 % When operating on 8-bit integer (INT8) data, the source vectors are processed as groups of four consecutive elements. The hardware computes the outer product of a 4-element sub-vector from the row input and a 4-element sub-vector from the column input, accumulating the sum into a 32-bit integer (INT32) destination tile. By packing four 8-bit multiplications into a single accumulator update, this 4-way mechanism significantly increases the arithmetic intensity and allows for efficient utilization of the available memory bandwidth.
