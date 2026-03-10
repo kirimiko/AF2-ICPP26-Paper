@@ -14,20 +14,20 @@ A naive approach that performs data layout transformation before every GEMM oper
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.95\linewidth]{figures/layout.pdf}
-    \caption{Tensor Layout Design.}
+    \caption{OPA-specialized Tensor Layout Design}
     \label{fig:layout}
 \end{figure}
 
-To mitigate this issue, we redesign the tensor layout to directly match the OPA input requirements. The format is shown in Figure~\ref{fig:layout} (a) and (b).
+To mitigate this issue, we redesign the tensor layout to directly match the OPA input requirements. The format is shown in Fig.~\ref{fig:layout} (a) and (b).
 %Specifically, we ensure that the output of one GEMM operator is stored in a layout that can be consumed directly by the subsequent GEMM, thereby eliminating the need for intermediate reformatting. In this design, format conversion is performed only at the entry and exit points of fused operator pipelines, significantly reducing redundant memory operations and improving overall efficiency.
 % 通用格式的Tensor布局与OPA布局之间的格式转换会引入额外的开销，我们通过两个措施来减少这种开销。首先，我们设计了不同输出格式的GEMM kernel，根据参数可以决定GEMM的结果是按照row-major或是OPA布局进行存储。这样在Evoformer中连续的GEMM操作之间就不需要进行格式转换，从而减少了大量的格式转换开销。考虑到一些GEMM可能会被softmax等算子分隔开，我们也实现了OPA布局下的一些其它算子，最大程度减少了Transformer内部的格式转换次数。第二，我们还针对格式转换的过程进行了优化，利用OPA寄存器阵列的特性，实现了高效的格式转换方法。
 Converting between the conventional tensor layout and the OPA-specialized layout introduces large overhead. Therefore, we employ two complementary strategies.
 
-First, we design multiple variants of the GEMM kernel that support different output layouts. Depending on the operator configuration, a GEMM can directly write its results either in standard row-major format or in the OPA-compatible layout. This design eliminates the need for layout conversion between consecutive GEMM operations inside the Evoformer, thereby removing a substantial portion of the conversion overhead.
-Figure~\ref{fig:layout} (c) demonstrates how to make the GEMM output directly compatible with the next GEMM input in the OPA layout. \textit{st2} is an instruction that can store two vector registers into memory in an interleaved manner. By combining \textit{st2} with vertical or horizontal reads of the ZA register, the GEMM output can be directly stored in the OPA layout.
+Firstly, we design multiple variants of the GEMM kernel that support different output layouts. Depending on the operator configuration, a GEMM can directly write its results either in standard row-major format or in the OPA-compatible layout. This design eliminates the need for layout conversion between consecutive GEMM operations inside the Evoformer, thereby removing a substantial portion of the conversion overhead.
+Fig.~\ref{fig:layout} (c) demonstrates how to make the GEMM output directly compatible with the next GEMM input in the OPA layout. \textit{st2} is an instruction that can store two vector registers into memory in an interleaved manner. By combining \textit{st2} with vertical or horizontal reads of the ZA register, the GEMM output can be directly stored in the OPA layout.
 Moreover, since some GEMMs are separated by non-linear operators such as softmax, we additionally implement several auxiliary operators that operate directly on tensors stored in the OPA layout. This further reduces the number of layout transitions required within the Transformer stack.
 
-Second, we optimize the layout conversion procedure itself. By exploiting the structural properties of the ZA registers, we implement an efficient data transformation mechanism that leverages the array's vertical and horizontal load and store capabilities. This approach allows converting row-major tiles into the OPA-required interleaved format with significantly lower overhead than scalar or vectorized index-based implementations.
+Secondly, we optimize the layout conversion procedure itself. By exploiting the structural properties of the ZA registers, we implement an efficient data transformation mechanism that leverages the array's vertical and horizontal load and store capabilities. This approach allows converting row-major tiles into the OPA-required interleaved format with significantly lower overhead than scalar or vectorized index-based implementations.
 % Detailed optimization is discussed in Section~\ref{sec:optimizations:format_conversion}.
 
 
@@ -52,7 +52,7 @@ Second, we optimize the layout conversion procedure itself. By exploiting the st
 % Among the three approaches, we adopt the third strategy as it provides the highest efficiency with minimal instruction overhead. This design not only reduces the frequency of layout transformations but also ensures that the transformations themselves are implemented in a hardware-friendly manner. Consequently, the proposed tensor layout optimization plays a critical role in enabling high-throughput GEMM execution under the OPA instruction model.
 
 \textbf{Format Conversion Optimization.}
-Format conversion is traditionally handled using scalar index-based methods or vectorized register manipulation via SIMD shuffle instructions. However, these conventional approaches rely on explicit element-wise address computation or multi-stage vector shuffling, which inevitably introduce non-trivial instruction overhead when processing large tensors. Compared to these traditional scalar and SIMD-based methods, leveraging the ZA registers is more efficient.
+Format conversion is traditionally handled with scalar index-based methods or vectorized register manipulation via SIMD shuffle instructions. However, these conventional approaches rely on explicit element-wise address computation or multi-stage vector shuffling, which inevitably introduce non-trivial instruction overhead when processing large tensors. Compared to these traditional scalar and SIMD-based methods, leveraging the ZA registers is more efficient.
 By exploiting ZA's native support for both horizontal and vertical accesses, this approach enables seamless conversion between row-major and column-major layouts, naturally generating the interleaving patterns required by OPA instructions.
 
 \begin{figure}[t]
@@ -62,12 +62,13 @@ By exploiting ZA's native support for both horizontal and vertical accesses, thi
     \label{fig:transformation}
 \end{figure}
 
-As illustrated in Fig.~\ref{fig:transformation}, taking a 128-bit vector length as an example under FP16 precision, each ZA register is treated as a vector register of 32-bit floating-point elements. In this representation, two consecutive FP16 elements remain adjacent in the final layout, satisfying the data alignment requirements of multi-lane accumulation. The transformation process consists of $VL_{32}$ horizontal writes followed by $VL_{32}$ vertical reads of ZA registers, enabling efficient data rearrangement with significantly fewer shuffle operations compared with conventional SIMD-based approaches.
+As illustrated in Fig.~\ref{fig:transformation}, taking a 128-bit vector length as an example under FP16 precision, each ZA register is treated as a vector register of 32-bit floating-point elements. In this representation, two consecutive FP16 elements remain adjacent in the final layout, satisfying the data alignment requirements of multi-lane accumulation. The transformation process consists of $\mathit{VL}_{32}$ horizontal writes followed by $\mathit{VL}_{32}$ vertical reads of ZA registers, enabling efficient data rearrangement with significantly fewer shuffle operations compared with conventional SIMD-based approaches.
 
 \textbf{Kernel Design.}
-In designing high-performance GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit ZA registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these ZA registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them most advantageous for GEMMs with relatively large $K$.
+In designing efficient GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit ZA registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these ZA registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them challenging to utilize effectively.
+%, making them most advantageous for GEMMs with relatively large $K$.
 
-In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs). If the GEMM were tiled along the $K$ dimension, it would not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
+In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs). Naively tiling along the $K$ dimension will not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
 Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than half of ZA registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available ZA registers for accumulation, ensuring maximal throughput across different precision settings.
 
@@ -75,11 +76,10 @@ Our empirical evaluation shows that kernel designs that leverage multiple accumu
 
 \subsection{Mixed Precision Strategy}
 
-For accelerating AlphaFold2 with a mixed precision strategy, we explore a FP32-FP16 mixed precision strategy to obtain performance gain with acceptable accuracy.
-
+For further accelerating AlphaFold2, we explore a FP32-FP16 mixed precision strategy to obtain performance gain with acceptable accuracy.
 % \subsubsection{FP16 Inference}
 % 在AlphaFold中，不同模块的算子对精度的容忍度不同。有些模块对精度非常敏感，比如ExtraEvoformer中的Outer Product Means模块，这个模块即使只是略微降低精度，也会导致最终精度大幅下降，甚至产生NAN，因此我们对这类模块仍然使用FP32精度。除了Outer Product Means模块之外，对于Softmax我们也使用FP32进行计算。在Embedding模块和Evoformer模块中，除了这两类算子之外，我们均直接使用FP16精度进行计算。
-In the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
+Specifically, in the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
 
 Similarly, the Softmax function is known to be susceptible to numerical instability, particularly when implemented with lower precision formats, which can struggle to handle the wide dynamic range of inputs and may lead to overflow or underflow issues. To mitigate these risks and preserve the integrity of the probability distributions it computes, we also compute all Softmax operations in FP32. For the remaining operators within the Embedding and Evoformer modules, which are less sensitive to precision, we utilize FP16 precision for their computation. This mixed-precision approach allows for a significant reduction in computational overhead while selectively preserving high precision for the most critical calculations, thereby maintaining the overall accuracy and stability of the AlphaFold2 inference process.
 % \subsubsection{INT8 Quantization}
@@ -117,4 +117,4 @@ M-dimension of the $Q\times K^T$ computation in Attention according to the seque
 
 If the total number of blocks does not exceed the thread capacity of a single NUMA node, execution is confined to that node to avoid cross-node communication. Otherwise, the batch dimension is distributed across multiple NUMA nodes, while the M-dimension is partitioned only within each node. This design ensures that inter-node communication is avoided and that threads within each NUMA node operate on independent blocks.
 
-This adaptive strategy allows the implementation to scale with sequence length while maintaining sufficiently large per-thread workloads and minimizing synchronization and NUMA communication overhead on the 72F many-core architecture.
+This adaptive strategy allows the implementation to scale with sequence length while maintaining sufficiently large per-thread workloads with minimum synchronization and NUMA communication overhead on the 72F many-core architecture.
