@@ -19,7 +19,7 @@ speedup_over_fastfold = [o / f for o, f in zip(fastfold, matrixfold_fp16)]
 print(max(speedup_over_fastfold), min(speedup_over_fastfold))
 print(max(speedup_fp16), min(speedup_fp16))
 
-fig, ax1 = plt.subplots(figsize=(8, 4))
+fig, ax1 = plt.subplots(figsize=(12, 4))
 
 # --------------------
 # Left Y-axis: Latency
@@ -72,7 +72,7 @@ ax2.set_yticks([0, 1, 2, 3, 4, 5, 6])
 # --------------------
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right', framealpha=0.5, fontsize=fontsize)
+ax1.legend(lines1 + lines2, labels1 + labels2, loc='lower center', framealpha=0.5, fontsize=fontsize, bbox_to_anchor=(0.5, 1.02), ncol=3)
 
 plt.tight_layout()
 plt.savefig('../figures/overall_performance.pdf')

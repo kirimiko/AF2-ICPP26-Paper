@@ -62,7 +62,7 @@ It is worth noting that our optimized implementation achieves inference performa
 \label{sec:end_to_end}
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/overall_performance.pdf}
+    \includegraphics[width=\linewidth]{figures/overall_performance.pdf}
     \caption{Inference Latency on all sequences.}
     \label{fig:endtoend}
 \end{figure}
@@ -165,7 +165,7 @@ Overall, these results demonstrate that the observed speedup trends are closely 
 \subsection{Accuracy Analysis}
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=\textwidth]{figures/result_pdb.pdf}
+    \includegraphics[width=\textwidth]{figures/tmscore.pdf}
     \caption{TM-score of all models on CASP14 dataset.}
     \label{fig:tmscore}
 \end{figure*}
@@ -190,6 +190,7 @@ To assess the prediction accuracy of MatrixFold, we adopt TM-score~\cite{zhang20
 In our evaluation, we use the FP32 version of AlphaFold2 predictions as the reference. Other models are evaluated by aligning their predicted protein structures against the original FP32 results using the TM-align tool, after which TM-scores are computed.
 
 Fig.~\ref{fig:tmscore} presents the TM-scores of predictions on a representative dataset from CASP14~\cite{casp14}, comparing all models against the FP32 baseline. The evaluation dataset contains real protein sequences of varying lengths, ensuring the validity of the results. The results show that MatrixFold predictions maintain TM-scores well above 0.7 for the vast majority of sequences, indicating that the reduced precision does not compromise the reliability of structural predictions.
+In addition, MatrixFold attains higher TM-scores than FastFold and Open-Omics-AlphaFold for most sequences, suggesting better prediction accuracy across the dataset.
 % 可以看出，在FP16下，预测的结构与真实结构高度一致，其二级结构等细节也得到了很好的保留。在INT8下，虽然原子结构与真实结构相比较为接近，但预测的结构细节保持较差，基本无法识别明显的二级结构。
 % These results confirm that our mixed-precision strategy preserves the accuracy of AlphaFold2 while improving inference efficiency under FP16 precision. %In particular, the INT8 quantized model achieves reliable structural predictions comparable to FP16 and FP32, thereby validating the feasibility of low-precision execution on CPU matrix units.
 
