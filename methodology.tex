@@ -76,7 +76,7 @@ Our empirical evaluation shows that kernel designs that leverage multiple accumu
 
 \subsection{Mixed Precision Strategy}
 
-For further accelerating AlphaFold2, we explore a FP32-FP16 mixed precision strategy to obtain performance gain with acceptable accuracy.
+For further accelerating AlphaFold2, we explore an FP32-FP16 mixed precision strategy to obtain a performance gain with acceptable accuracy.
 % \subsubsection{FP16 Inference}
 % 在AlphaFold中，不同模块的算子对精度的容忍度不同。有些模块对精度非常敏感，比如ExtraEvoformer中的Outer Product Means模块，这个模块即使只是略微降低精度，也会导致最终精度大幅下降，甚至产生NAN，因此我们对这类模块仍然使用FP32精度。除了Outer Product Means模块之外，对于Softmax我们也使用FP32进行计算。在Embedding模块和Evoformer模块中，除了这两类算子之外，我们均直接使用FP16精度进行计算。
 Specifically, in the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
@@ -112,7 +112,7 @@ This communication mechanism is built on top of the memory movement unit availab
 % This adaptive parallelism mechanism allows our implementation to efficiently utilize the many-core 72F architecture while avoiding the pitfalls of fixed thread allocation, ensuring that both short and long sequences achieve high throughput with minimal communication and synchronization overhead.
 Moreover, the key challenge in optimizing AlphaFold2 on many-core CPUs arises from the variable length of protein sequences. In AlphaFold2, parallelism is mainly exposed across sequences in a batch. When sequences are short, the available parallelism is often small, making it difficult to efficiently utilize all cores of a many-core CPU. Excessive parallelization in such cases leads to very small per-thread workloads, frequent synchronization, and expensive cross-NUMA communication.
 
-To address this issue, we adopt a sequence-length-aware parallelization strategy. Specifically, we partition the batch dimension and the 
+To address this issue, we adopt a sequence-length-aware parallelization strategy. Specifically, we partition the batch dimension and the
 M-dimension of the $Q\times K^T$ computation in Attention according to the sequence length and cache capacity. The resulting block count determines the degree of parallelism.
 
 If the total number of blocks does not exceed the thread capacity of a single NUMA node, execution is confined to that node to avoid cross-node communication. Otherwise, the batch dimension is distributed across multiple NUMA nodes, while the M-dimension is partitioned only within each node. This design ensures that inter-node communication is avoided and that threads within each NUMA node operate on independent blocks.
