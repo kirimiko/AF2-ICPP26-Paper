@@ -2,9 +2,9 @@
 % LLNCS macro package for Springer Computer Science proceedings;
 % Version 2.21 of 2022/01/12
 %
-\documentclass[runningheads]{llncs}
+\documentclass[sigconf,review,anonymous]{acmart}
 %
-\usepackage[T1]{fontenc}
+% \usepackage[T1]{fontenc}
 
 \usepackage{booktabs}   %% For formal tables:
                         %% http://ctan.org/pkg/booktabs
@@ -34,7 +34,6 @@
 \usepackage{listings}
 \usepackage{bigstrut}
 \usepackage{makecell}
-\usepackage{cite}
 
 
 
@@ -55,7 +54,7 @@
 % \title[MatrixFold: Acceleration of Mixed-Precision Alphafold Inference on CPU]{MatrixFold: Hardware-Aware Acceleration of Mixed-Precision AlphaFold Inference on Manycore CPUs with Outer-Product Units}         %% [Short Title] is optional;
 % \title{Hardware-Aware Acceleration of Mixed-Precision AlphaFold Inference on Manycore CPUs with Outer-Product Units} 
 \title{MatrixFold: Unleashing Manycore CPUs with Outer-Product Units for Mixed-Precision AlphaFold Inference}
-\titlerunning{MatrixFold}
+% \titlerunning{MatrixFold}
 %% when present, will be used in
 %% header instead of Full Title.
 %\titlenote{For simple use only}             %% \titlenote is optional;
@@ -138,7 +137,6 @@
 
 
 
-\maketitle
 %% Abstract
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
@@ -149,7 +147,7 @@
 % \keywords{AlphaFold2, Protein Structure Prediction, Mixed-Precision Inference, Many-core CPU, Matrix Unit, Outer Product Unit}
 
 
-%% \maketitle
+\maketitle
 %% Note: \maketitle command must come after title commands, author
 %% commands, abstract environment, Computing Classification System
 %% environment and commands, and keywords command.
@@ -165,7 +163,8 @@
 \input{relatedwork}
 \input{conclusion}
 
-\bibliographystyle{splncs04}
+% \bibliographystyle{splncs04}
+\bibliographystyle{ACM-Reference-Format}
 %% Bibliography
 \bibliography{ref}
 
