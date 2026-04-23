@@ -1,13 +1,35 @@
-% \section{Background}
-\section{The Architecture of 72F CPU}
+\section{Background}
+\color{red}
+\subsection{SVE and SME Units on Arm CPUs}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/outerproduct.png}
+    \caption{GEMM model of outer-product and inner-product.}
+     \label{fig:outer_product_diagram}
+\end{figure}
+Arm processors have continuously expanded support for data-parallel and matrix-centric computation to satisfy increasing demand from HPC and AI workloads. Two architectural features, SVE and SME, are central to this trend. SVE provides a vector-length-agnostic SIMD model, while SME introduces a matrix-oriented outer-product execution model specialized for high-throughput accumulation (Figure~\ref{fig:outer_product_diagram} (b)). Understanding the execution semantics of these features is essential for optimization of irregular GEMMs.
+
+SVE extends conventional SIMD through vector-length agnosticism. Instead of fixing vector width at compile time, SVE implementations expose vector lengths from 128 to 2048 bits in 128-bit increments. In this work, both evaluated platforms (Kunpeng 920F and M4 Pro) implement a 512-bit vector length (VL). SVE also introduces predicate registers to control active lanes. Each predicate element controls whether the corresponding lane is active, so inactive lanes are masked without control-flow divergence. Combined with predication, this design handles loop tails and non-uniform trip counts efficiently without explicit scalar epilogues. 
+
+SME builds on SVE and shifts the computational abstraction from lane-wise vectors to tile-wise accumulation. Architecturally, SME introduces the ZA matrix register file, which is a two-dimensional accumulator with an VL $\times$ VL byte array. This array is partitioned into different numbers of logical ZA register groups according to element precision. Element sizes of 1, 2, 4, 8, and 16 bytes correspond to 1, 2, 4, 8, and 16 groups, respectively. SME operations execute in streaming SVE mode, an Arm execution state that specializes the visible instruction environment for matrix-oriented computation. In this mode, SME instructions consume SVE operands and accumulate outer-product contributions directly into ZA. 
+
+Compared with traditional SIMD execution, SME changes both primitive operation and accumulation lifetime. The MOPA instruction executes an outer product that contributes a rank-1 update to a matrix tile, delivering $O(VL^2)$ operations in a single instruction. Repeated updates along the reduction dimension construct the final tile in ZA. At the same time, partial sums remain in ZA across multiple instructions, which reduces pressure on general vector registers. Consequently, this architectural design provides superior arithmetic intensity beyond what is achievable with SVE alone.
+
+However, these benefits are accompanied by structural constraints. Efficiency of SME depends on matching problem dimensions with tile geometry, and overhead from ZA data movement must be amortized by sufficient computation. Therefore, applying SME to irregular GEMMs demands specialized optimization strategies to prevent severe performance degradation.
+
+In summary, SVE offers flexible vector-parallel execution with strong tail handling, while SME offers a tile-accumulation path with higher peak matrix throughput. The shift from lane-wise SIMD to tile-wise outer-product accumulation defines both opportunities and constraints for SME-based GEMM kernels.
+\color{black}
+
+\subsection{The Architecture of 72F CPU}
 \label{sec:background}
 % \subsection{The Architecture of 72F CPU}
 % 72F CPU提供了OPA(Outer-Product Accumulator)以及配套的向量指令用于加速矩阵计算。72F使用一个array register来存储外积计算的结果，该array register可以被拆分为1个8-bits元素、2个16-bits元素、4个32-bits元素或8个64-bits元素的寄存器。对于每种数据类型，array register均含有VL(vector lenght) $\times$ VL个元素。OPA指令从将两个向量寄存器中的向量做外积，并累加到相应精度的array register上。72F 提供了int8、fp16、fp32、fp64的OPA指令。int8的OPA指令会将输入寄存器划分为4个向量，并在int32精度的array register上累加4组外积的结果。fp16的OPA指令会将输入寄存器划分为两个向量，并在fp32精度的array register上累加2组外积的结果。fp32与fp64则是直接在相应精度的array register上累加一组外积的结果。对于fp16(int8)的OPA指令，72F要求同一个输入寄存器内的向量是交织的，也即每个外积向量的元素索引之差为2(4)。
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.5\linewidth]{figures/opa_2way.pdf}
-    \caption{2-way OPA Instruction on 72F CPU}
+    \includegraphics[width=0.8\linewidth]{figures/opa_2way.pdf}
+    \includegraphics[width=0.8\linewidth]{figures/opa_2way.pdf}
+    \caption{\color{red}2-way OPA Instruction on 72F CPU}
     \label{fig:opa}
 \end{figure}
 

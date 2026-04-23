@@ -9,7 +9,7 @@ LOG_PATTERN = re.compile(r"^(SVE|SME|SCALER)\s+.*?N=(\d+).*?pack%=(\d+\.\d+)")
 label_map = {
 	'SCALER': 'SCALAR',
 	'SVE': 'VECTOR',
-	'SME': 'ARRAY REGISTERS',
+	'SME': 'ZA',
 }
 
 
@@ -25,7 +25,7 @@ def parse_log(log_path: Path) -> dict[str, dict[int, float]]:
 
 
 def plot_pack_percent(data: dict[str, dict[int, float]], output: Path) -> None:
-	fig, ax = plt.subplots(figsize=(7, 4))
+	fig, ax = plt.subplots(figsize=(7, 5))
 
 	styles = {
 		"SCALER": {"color": "#8c564b", "marker": "o"},

@@ -34,6 +34,7 @@
 \usepackage{listings}
 \usepackage{bigstrut}
 \usepackage{makecell}
+\usepackage{subcaption}
 
 
 
@@ -46,7 +47,9 @@
 % defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
-
+\settopmatter{printfolios=true,printacmref=false} % Removes citation information below abstract
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
 \begin{document}
 
 

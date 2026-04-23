@@ -19,7 +19,7 @@ speedup_over_fastfold = [o / f for o, f in zip(fastfold, matrixfold_fp16)]
 print(max(speedup_over_fastfold), min(speedup_over_fastfold))
 print(max(speedup_fp16), min(speedup_fp16))
 
-fig, ax1 = plt.subplots(figsize=(12, 4))
+fig, ax1 = plt.subplots(figsize=(8, 6))
 
 # --------------------
 # Left Y-axis: Latency
