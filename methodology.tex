@@ -7,7 +7,7 @@
 
 % 对于int8与fp16精度的OPA指令，72F要求输入寄存器内的向量是交织的。如果在寄存器中将标准row-major的矩阵进行重排，需要插入大量的寄存器操作指令。在72F上，单条数据排布指令与单条OPA指令的延迟类似，且难以与OPA指令重叠。这些指令会极大程度上拖慢OPA指令的执行速度。为了避免这种情况，我们设计了一个新的矩阵数据格式，称为Interleaved Matrix Format (IMF)。IMF将矩阵的行元素交织存储，使得每个向量寄存器中的元素可以直接用于OPA指令，而无需额外的重排操作。通过将GEMM的kernel设计为可以接收与输出IMF格式，我们可以避免大量的数据排布开销，而仅仅需要在算子入口处进行一次数据格式转换。
 \textbf{Tensor Layout Optimization.}
-One of the key challenges in exploiting the OPA instructions is their requirement for a specialized input data layout. Unlike conventional GEMM implementations that operate on row-major or column-major matrices, OPA instructions mandate a custom format for operand loading and accumulation.
+One of the key challenges in exploiting the OPA instructions is their requirement for a specialized input data layout. Unlike conventional GEMM implementations~\cite{goto2008anatomy,vanzee2015blis,alaejos2023microkernels} that operate on row-major or column-major matrices, OPA instructions mandate a custom format for operand loading and accumulation.
 For row-major matrices, the OPA instruction requires matrix A in GEMM to be read in a column-oriented manner. This necessitates block-wise transposition and interleaving prior to OPA execution.
 A naive approach that performs data layout transformation before every GEMM operation introduces prohibitive overhead, largely offsetting the benefits of hardware acceleration.
 
@@ -68,7 +68,7 @@ As illustrated in Fig.~\ref{fig:transformation}, taking a 128-bit vector length 
 In designing efficient GEMM kernels for AlphaFold2, a critical trade-off arises between memory locality and the use of OPA instructions. OPA instructions exploit ZA registers to store and compute outer-product results, offering high throughput for large-scale matrix multiplications. However, loading data into and storing data from these ZA registers incurs non-negligible overhead, particularly when the $K$ dimension is small. In such cases, the overhead can offset the computational benefits of the OPA instructions, making them challenging to utilize effectively.
 %, making them most advantageous for GEMMs with relatively large $K$.
 
-In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs). Naively tiling along the $K$ dimension will not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
+In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tall and skinny} GEMMs), a regime that has long been recognized as challenging in numerical linear algebra~\cite{demmel2012communication,anderson2011communication}. Naively tiling along the $K$ dimension will not only disrupt memory locality but also significantly reduce the effective throughput of OPA instructions. Therefore, in our implementation, we adopt a K-unblocked approach, performing the reduction over the entire $K$ dimension in a single step. This design eliminates redundant data movement and maximizes the utilization of OPA instructions along the $M$ and $N$ dimensions.
 
 Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than half of ZA registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available ZA registers for accumulation, ensuring maximal throughput across different precision settings.
 
@@ -76,7 +76,7 @@ Our empirical evaluation shows that kernel designs that leverage multiple accumu
 
 \subsection{Mixed Precision Strategy}
 
-For further accelerating AlphaFold2, we explore an FP32-FP16 mixed precision strategy to obtain a performance gain with acceptable accuracy.
+For further accelerating AlphaFold2, we explore an FP32-FP16 mixed precision strategy~\cite{micikevicius2018mixed} to obtain a performance gain with acceptable accuracy.
 % \subsubsection{FP16 Inference}
 % 在AlphaFold中，不同模块的算子对精度的容忍度不同。有些模块对精度非常敏感，比如ExtraEvoformer中的Outer Product Means模块，这个模块即使只是略微降低精度，也会导致最终精度大幅下降，甚至产生NAN，因此我们对这类模块仍然使用FP32精度。除了Outer Product Means模块之外，对于Softmax我们也使用FP32进行计算。在Embedding模块和Evoformer模块中，除了这两类算子之外，我们均直接使用FP16精度进行计算。
 Specifically, in the architecture of AlphaFold2, the tolerance for numerical precision varies among different modules and their constituent operators. This variability allows for the strategic use of mixed-precision computation to accelerate inference without compromising the final accuracy of the model. A notable example of a highly sensitive component is the Outer Product Mean module within the ExtraEvoformer. Even slight reductions in the precision of this module can lead to a significant degradation in accuracy and potentially cause numerical instabilities, such as producing NaN (Not a Number) values. Consequently, we maintain FP32 precision for this module to ensure robust and accurate calculations.
@@ -92,7 +92,7 @@ Similarly, the Softmax function is known to be susceptible to numerical instabil
 
 % \subsection{Multiple Processes on Multi-NUMA Nodes}
 \subsection{Adaptive Numa-aware Parallelism}
-To further improve scalability within a single compute node, we designed a set of communication interfaces that exploit shared memory. Unlike inter-node communication, processes on the same NUMA domain can exchange intermediate results directly through shared memory buffers, thereby avoiding redundant data copies.
+To further improve scalability within a single compute node, where memory placement and interconnect contention are well-known bottlenecks on multi-NUMA systems~\cite{majo2011numa}, we designed a set of communication interfaces that exploit shared memory. Unlike inter-node communication, processes on the same NUMA domain can exchange intermediate results directly through shared memory buffers, thereby avoiding redundant data copies.
 This communication mechanism is built on top of the memory movement unit available on the 72F platform. By leveraging the memory movement unit, processes can offload data transfer from the CPU to the memory subsystem, reducing overhead and improving concurrency between computation and communication.
 
 % The shared-memory interfaces are designed to support collective operations commonly required in AlphaFold-style workloads, such as all-to-all and broadcast. 
