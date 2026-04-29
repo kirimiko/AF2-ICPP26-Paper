@@ -38,7 +38,7 @@ Meanwhile, small K does not imply low computational load. These GEMMs often feat
 % Another major bottleneck in AlphaFold2 arises from communication overheads. To enforce the physical plausibility of the protein structure, AlphaFold2 interleaves different types of attention and pairwise updates, many of which require switching tensor layouts. For example, intra-chain and inter-chain attention operate on different axes of the same tensor, leading to repeated transpose operations. These operations require frequent tensor transpositions to convert between row-major and column-major layouts of activations. Since AlphaFold2 parallelizes primarily along the sequence or residue dimensions ($N_s$ or $N_r$), every transposition following an attention step introduces a synchronization barrier across parallel workers. In Fig.~\ref{fig:af2model}, the transposition is denoted by \textit{T}, and \textit{T'} represents an equivalent transposition operation.
 % Consequently, the Evoformer incurs a large number of communication events, particularly when executed on many-core architectures. Each of these events involves data movement across NUMA domains or across nodes in a distributed setup, introducing latency and bandwidth pressure. As sequence lengths increase, the cost of these transpositions grows super-linearly with activation size, making communication one of the most significant bottlenecks for scaling AlphaFold2.
 
-
+\subsection{AlphaFold2}
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/AlphaFold.pdf}
