@@ -34,7 +34,7 @@ It is worth noting that our optimized implementation achieves inference performa
 
 
 
-\color{red}
+% \color{red}
 \subsection{Impact of Matrix Dimensions on Performance}
 \label{sec:evaluation:sensitivity}
 
@@ -54,10 +54,10 @@ It is worth noting that our optimized implementation achieves inference performa
 To quantify the architectural bottlenecks identified in Section~\ref{sec:analysis}, we conduct a microbenchmarking study by independently sweeping the reduction dimension ($K$) and the independent dimension ($N$). Fig.~\ref{fig:gemm_sensitivity} illustrates the measured throughput for both FP16 and INT8 precisions.
 
 \textit{Reduction Dimension ($K$) Dominance:}
-As shown in Fig.~\ref{fig:gemm_sensitivity}(a), we fix $M=N=32$ and vary $K$ from 32 to 2048. The results demonstrate a strong positive correlation between $K$ and performance. At small $K$ ($K=32$), the system is severely bound by the register readout overhead, yielding only $\sim$120 GFLOPS. However, as $K$ increases, the arithmetic intensity rises, effectively amortizing the fixed readout costs. Consequently, FP16 throughput saturates at 718 GFLOPS ($6.1\times$ speedup), while INT8 throughput scales almost linearly to 1685 GFLOPS ($13.7\times$ speedup), leveraging the higher peak compute capability of integer units.
+As shown in Fig.~\ref{fig:gemm_sensitivity}(a), we fix $M=N=32$ and vary $K$ from 32 to 2048. The results demonstrate a strong positive correlation between $K$ and performance. At small $K$ ($K=32$), the system is severely bound by the register readout overhead. However, as $K$ increases, the arithmetic intensity rises, effectively amortizing the fixed readout costs. Consequently, FP16 throughput saturates at 720 GFLOPS, while FP32 throughput scales to 362 GFLOPS.
 
 \textit{Insensitivity to Independent Dimension ($N$):}
-Conversely, Fig.~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fixing the bottleneck dimension $K$ at 32. Strikingly, performance remains stagnant around 120 GFLOPS regardless of $N$ (ranging from 32 to 2048). This "flatline" behavior confirms that increasing parallelism along the independent dimension fails to mitigate the bottleneck caused by frequent register array draining. These empirical results corroborate our analysis: performance on the 920F architecture is strictly determined by the amortization efficiency of the $K$ dimension.
+Conversely, Fig.~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fixing the bottleneck dimension $K$ at 32. Strikingly, performance of FP32 remains stagnant around 140 GFLOPS regardless of $N$ (ranging from 32 to 2048). This "flatline" behavior confirms that increasing parallelism along the independent dimension fails to mitigate the bottleneck caused by frequent ZA draining. These empirical results corroborate our analysis: performance on the 920F architecture is strictly determined by the amortization efficiency of the $K$ dimension.
 \color{black}
 
 \subsection{End-to-End Performance Comparison}
@@ -172,21 +172,21 @@ As shown in Fig.~\ref{fig:pack_strategy}, the register-array-based packing strat
     \label{fig:tmscore}
 \end{figure*}
 
-\begin{figure}[t]
-    \centering
-    \begin{minipage}[b]{0.39\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/T1024_fp16.png}
-        % \caption{(a) FP16 vs Real Structure.}
-    \end{minipage}
-    \begin{minipage}[b]{0.39\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/T1024_int8.png}
-        % \caption{(b) INT8 vs Real Structure.}
-    \end{minipage}
-    \caption{\color{red}Visual comparison of predicted structures for sequence T1024 under different precisions. Left is FP16 and right is INT8.}
-    \label{fig:visual_compare}
-\end{figure}
+% \begin{figure}[t]
+%     \centering
+%     \begin{minipage}[b]{0.39\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{figures/T1024_fp16.png}
+%         % \caption{(a) FP16 vs Real Structure.}
+%     \end{minipage}
+%     \begin{minipage}[b]{0.39\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{figures/T1024_int8.png}
+%         % \caption{(b) INT8 vs Real Structure.}
+%     \end{minipage}
+%     \caption{\color{red}Visual comparison of predicted structures for sequence T1024 under different precisions. Left is FP16 and right is INT8.}
+%     \label{fig:visual_compare}
+% \end{figure}
 % 我们使用了CASP14中的所有数据对比了int8、fp16以及fp32精度下的AlphaFold2的预测精度。我们选用的评估标准为TM-Score
 To assess the prediction accuracy of MatrixFold, we adopt TM-score~\cite{zhang2004scoring} as the evaluation metric. TM-score is a widely used measure to quantify the structural similarity between two protein conformations, with values ranging from 0 to 1. A higher TM-score indicates greater similarity, and scores above 0.5 are generally considered to represent the same overall fold, while scores above 0.7 are typically regarded as highly reliable in structural biology studies.~\cite{xu2010significant} The TM-score of two structures can be calculated using the TM-align tool~\cite{zhang2005tm}.
 In our evaluation, we use the FP32 version of AlphaFold2 predictions as the reference. Other models are evaluated by aligning their predicted protein structures against the original FP32 results using the TM-align tool, after which TM-scores are computed.
