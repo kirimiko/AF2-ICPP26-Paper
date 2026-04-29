@@ -22,7 +22,7 @@ fastfold = {512: 175, 1024: 329, 1576: 500}
 open_omics = {512: 257.78, 1024: 682.7, 1576: 1559.32}
 
 # 创建子图，每个子图纵轴独立
-fig, axes = plt.subplots(1, 3, figsize=(18,4), sharey=False)
+fig, axes = plt.subplots(1, 3, figsize=(18,4.5), sharey=False)
 
 for i, seq in enumerate(seq_lengths):
     ax = axes[i]

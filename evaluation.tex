@@ -1,14 +1,14 @@
 \section{Evaluation}
 \label{sec:evaluation}
 \subsection{Experimental Setup}
-% 我们的实验一共在两个Cluster上进行。在Cluster A上，我们在72F CPU上评估了MatrixFold的性能。同时，我们将Cluster B上运行的FastFold{\color{red}~\cite{}}作为我们的基线。每个Cluster的具体配置如表~\ref{tab:cluster}所示。
-We evaluate our optimizations on three distinct computing environments. The primary environment is a CPU cluster that serves as the optimization target of this work. The cluster is equipped with two 72F processors, each consisting of 8 NUMA nodes. Unless otherwise stated, all reported CPU results are obtained on a single 72F processor, which allows us to highlight the effectiveness of our optimizations without the influence of inter-socket communication overhead. This platform provides not only high computational throughput but also specialized matrix computation units, which we exploit to accelerate AlphaFold2 inference. Detailed hardware and software configurations are shown in Table~\ref{tab:cluster}.
+% 我们的实验一共在两个Cluster上进行。在Cluster A上，我们在920F CPU上评估了MatrixFold的性能。同时，我们将Cluster B上运行的FastFold{\color{red}~\cite{}}作为我们的基线。每个Cluster的具体配置如表~\ref{tab:cluster}所示。
+We evaluate our optimizations on three distinct computing environments. The primary environment is a CPU cluster that serves as the optimization target of this work. The cluster is equipped with two 920F processors, each consisting of 8 NUMA nodes. Unless otherwise stated, all reported CPU results are obtained on a single 920F processor, which allows us to highlight the effectiveness of our optimizations without the influence of inter-socket communication overhead. This platform provides not only high computational throughput but also specialized matrix computation units, which we exploit to accelerate AlphaFold2 inference. Detailed hardware and software configurations are shown in Table~\ref{tab:cluster}.
 
-For comparison, we benchmark against Open-Omics-Alphafold~\cite{openomicsalphafold} and FastFold~\cite{cheng2024fastfold} , state-of-the-art accelerated implementations of AlphaFold2 on NVIDIA GPU and Intel CPU. FastFold experiments are conducted on a server equipped with two Intel Xeon Gold 6336Y processors and a single NVIDIA A800 GPU. Open-omics-alphafold experiments are conducted on a server with an Intel Xeon w9-3495X, which supports inference on AMX-bf16. These configurations represent the mainstream deployment setting for AlphaFold2 inference on GPUs and CPUs, while their peak performance is similar to 72F CPU, providing a strong baseline to evaluate the competitiveness of our CPU-based optimizations.
+For comparison, we benchmark against Open-Omics-Alphafold~\cite{openomicsalphafold} and FastFold~\cite{cheng2024fastfold} , state-of-the-art accelerated implementations of AlphaFold2 on NVIDIA GPU and Intel CPU. FastFold experiments are conducted on a server equipped with two Intel Xeon Gold 6336Y processors and a single NVIDIA A800 GPU. Open-omics-alphafold experiments are conducted on a server with an Intel Xeon w9-3495X, which supports inference on AMX-bf16. These configurations represent the mainstream deployment setting for AlphaFold2 inference on GPUs and CPUs, while their peak performance is similar to 920F CPU, providing a strong baseline to evaluate the competitiveness of our CPU-based optimizations.
 
 % Our evaluation dataset consists primarily of protein sequences from CASP14, which is widely adopted as a standard benchmark for protein structure prediction. Using CASP14 ensures that our results are comparable with prior studies and faithfully reflect AlphaFold2's predictive capability under realistic inference workloads.
 
-It is worth noting that our optimized implementation achieves inference performance on a single 72F processor that matches or even surpasses that of an A800 GPU running FastFold, highlighting the potential of CPU-based acceleration with matrix units and mixed-precision techniques.
+It is worth noting that our optimized implementation achieves inference performance on a single 920F processor that matches or even surpasses that of an A800 GPU running FastFold, highlighting the potential of CPU-based acceleration with matrix units and mixed-precision techniques.
 \begin{table}
     \footnotesize
     \caption{Cluster Configuration}
@@ -20,7 +20,7 @@ It is worth noting that our optimized implementation achieves inference performa
         Cluster  & A               & B                                                                                   & C                                                                                \\
         \hline
         % \hline
-        CPU      & 72F             & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Intel Xeon  Gold 6336Y\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Intel Xeon  w9-3495X\end{tabular}} \\% \hline
+        CPU      & 920F             & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Intel Xeon  Gold 6336Y\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Intel Xeon  w9-3495X\end{tabular}} \\% \hline
         Core     & more than 256   & 24                                                                                  & 56                                                                               \\% \hline
         Memory   & 512GB DDR4      & 512GB DDR4                                                                          & 512GB DDR4                                                                       \\% \hline
         GPU      & -               & A800 (80GB)                                                                         & -                                                                                \\% \hline
@@ -48,7 +48,7 @@ It is worth noting that our optimized implementation achieves inference performa
         \includegraphics[width=\linewidth]{figures/gemm_sensitivity2.pdf}
         \caption{Sensitivity to N (M=K=32)}
     \end{subfigure}
-    \caption{Performance sensitivity of GEMM kernels on the 72F platform.}
+    \caption{Performance sensitivity of GEMM kernels on the 920F platform.}
     \label{fig:gemm_sensitivity}
 \end{figure}
 To quantify the architectural bottlenecks identified in Section~\ref{sec:analysis}, we conduct a microbenchmarking study by independently sweeping the reduction dimension ($K$) and the independent dimension ($N$). Fig.~\ref{fig:gemm_sensitivity} illustrates the measured throughput for both FP16 and INT8 precisions.
@@ -57,7 +57,7 @@ To quantify the architectural bottlenecks identified in Section~\ref{sec:analysi
 As shown in Fig.~\ref{fig:gemm_sensitivity}(a), we fix $M=N=32$ and vary $K$ from 32 to 2048. The results demonstrate a strong positive correlation between $K$ and performance. At small $K$ ($K=32$), the system is severely bound by the register readout overhead, yielding only $\sim$120 GFLOPS. However, as $K$ increases, the arithmetic intensity rises, effectively amortizing the fixed readout costs. Consequently, FP16 throughput saturates at 718 GFLOPS ($6.1\times$ speedup), while INT8 throughput scales almost linearly to 1685 GFLOPS ($13.7\times$ speedup), leveraging the higher peak compute capability of integer units.
 
 \textit{Insensitivity to Independent Dimension ($N$):}
-Conversely, Fig.~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fixing the bottleneck dimension $K$ at 32. Strikingly, performance remains stagnant around 120 GFLOPS regardless of $N$ (ranging from 32 to 2048). This "flatline" behavior confirms that increasing parallelism along the independent dimension fails to mitigate the bottleneck caused by frequent register array draining. These empirical results corroborate our analysis: performance on the 72F architecture is strictly determined by the amortization efficiency of the $K$ dimension.
+Conversely, Fig.~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fixing the bottleneck dimension $K$ at 32. Strikingly, performance remains stagnant around 120 GFLOPS regardless of $N$ (ranging from 32 to 2048). This "flatline" behavior confirms that increasing parallelism along the independent dimension fails to mitigate the bottleneck caused by frequent register array draining. These empirical results corroborate our analysis: performance on the 920F architecture is strictly determined by the amortization efficiency of the $K$ dimension.
 \color{black}
 
 \subsection{End-to-End Performance Comparison}
@@ -68,17 +68,17 @@ Conversely, Fig.~\ref{fig:gemm_sensitivity}(b) isolates the impact of $N$ by fix
     \caption{Inference Latency on all sequences.}
     \label{fig:endtoend}
 \end{figure}
-% 我们选择了一系列不同长度的输入数据上评估了目前的sota FastFold以及FP16、INT8精度的MatrixFold，以评估MatrixFold在不同长度的序列上的加速效果。我们将序列长度按照1K以下、2K左右以及2K以上划分为短序列、长序列以及极长序列，分别进行了评估。在评估过程中，对于FastFold我们使用了一块80GB的A800，而对MatrixFold则使用了1颗72F CPU。
+% 我们选择了一系列不同长度的输入数据上评估了目前的sota FastFold以及FP16、INT8精度的MatrixFold，以评估MatrixFold在不同长度的序列上的加速效果。我们将序列长度按照1K以下、2K左右以及2K以上划分为短序列、长序列以及极长序列，分别进行了评估。在评估过程中，对于FastFold我们使用了一块80GB的A800，而对MatrixFold则使用了1颗920F CPU。
 We evaluate the end-to-end inference performance of our proposed MatrixFold against the state-of-the-art GPU implementation FastFold and CPU implementation Open-Omics-Alphafold. Experiments are conducted across a diverse set of protein sequences with varying lengths.
 % Following prior practice, we categorize the inputs into three groups: \textit{short sequences} ($<$1K residues), \textit{long sequences} (around 2K residues), and \textit{extremely long sequences} ($>$2K residues). 
 
-Fig.~\ref{fig:endtoend} reports the end-to-end inference latency and the corresponding speedup of MatrixFold over Open-Omics AlphaFold across varying sequence lengths. Several clear trends can be observed, which can be explained by the architectural differences among the evaluated platforms, namely the Intel CPU, the 72F CPU, and the A800 GPU.
+Fig.~\ref{fig:endtoend} reports the end-to-end inference latency and the corresponding speedup of MatrixFold over Open-Omics AlphaFold across varying sequence lengths. Several clear trends can be observed, which can be explained by the architectural differences among the evaluated platforms, namely the Intel CPU, the 920F CPU, and the A800 GPU.
 
-First, as the target platform transitions from the Intel CPU to the 72F and further to the A800, the single-core performance gradually decreases while the degree of hardware parallelism increases. For short sequences, the overall workload is relatively small and difficult to partition efficiently across a large number of threads or processing units. In this regime, strong single-core performance becomes the dominant factor. As a result, the Intel CPU achieves comparatively better absolute inference performance, and the speedup of MatrixFold over GPU-based baselines remains limited. As the sequence length increases, the workload becomes more amenable to parallel execution, enabling MatrixFold to better exploit the available thread-level and data-level parallelism. Consequently, the speedup increases with sequence length in the short-to-medium-length regime.
+First, as the target platform transitions from the Intel CPU to the 920F and further to the A800, the single-core performance gradually decreases while the degree of hardware parallelism increases. For short sequences, the overall workload is relatively small and difficult to partition efficiently across a large number of threads or processing units. In this regime, strong single-core performance becomes the dominant factor. As a result, the Intel CPU achieves comparatively better absolute inference performance, and the speedup of MatrixFold over GPU-based baselines remains limited. As the sequence length increases, the workload becomes more amenable to parallel execution, enabling MatrixFold to better exploit the available thread-level and data-level parallelism. Consequently, the speedup increases with sequence length in the short-to-medium-length regime.
 
 As the sequence length continues to grow, a different bottleneck emerges on the A800 GPU. Due to the limited GPU memory capacity, long-sequence inference requires chunking the input into smaller segments, which prevents the parallelism from scaling proportionally with problem size. This chunking overhead restricts further performance gains on the GPU, leading to an increasing speedup of MatrixFold relative to the A800 for long sequences. In contrast, MatrixFold can maintain a more stable execution pattern without introducing additional partitioning overhead at this stage.
 
-Finally, when the sequence length becomes sufficiently large, the size of intermediate activations in the inference process exceeds the on-chip memory capacity of the 72F processor. This results in increased off-chip memory accesses and reduced data locality, which slightly degrades the relative performance advantage of MatrixFold over Open-Omics AlphaFold. As a consequence, the speedup of MatrixFold over the Open-Omics baseline exhibits a mild decline in the long-sequence regime, despite remaining consistently above unity.
+Finally, when the sequence length becomes sufficiently large, the size of intermediate activations in the inference process exceeds the on-chip memory capacity of the 920F processor. This results in increased off-chip memory accesses and reduced data locality, which slightly degrades the relative performance advantage of MatrixFold over Open-Omics AlphaFold. As a consequence, the speedup of MatrixFold over the Open-Omics baseline exhibits a mild decline in the long-sequence regime, despite remaining consistently above unity.
 
 Overall, these results demonstrate that the observed speedup trends are closely tied to the interaction between sequence length and architectural characteristics, including single-core performance, available parallelism, and memory capacity constraints. MatrixFold achieves the most significant benefits in regimes where parallelism can be effectively exploited without being limited by memory capacity or partitioning overheads.
 
@@ -100,7 +100,7 @@ Overall, these results demonstrate that the observed speedup trends are closely 
 % As discussed in Section~\ref{sec:evaluation:sensitivity}, the performance gap between FP16 and INT8 narrows for smaller sequences due to the limited matrix sizes, which restrict the ability of INT8 to fully leverage its higher compute throughput.
 
 % Table~\ref{tab:inference_ex_long} summarizes the raw performance results for extremely long sequences.
-% On extremely long sequences, MatrixFold significantly outperforms FastFold. This advantage stems from the fundamental hardware differences: the 72F CPU provides substantially larger main memory capacity compared to the 80GB HBM of the A800 GPU. FastFold is forced to use very small chunk sizes in order to fit the sequences into GPU memory, which restricts parallelism and reduces throughput. In contrast, MatrixFold benefits from abundant system memory, allowing the same degree of parallelism as in shorter sequences, thereby sustaining high efficiency.
+% On extremely long sequences, MatrixFold significantly outperforms FastFold. This advantage stems from the fundamental hardware differences: the 920F CPU provides substantially larger main memory capacity compared to the 80GB HBM of the A800 GPU. FastFold is forced to use very small chunk sizes in order to fit the sequences into GPU memory, which restricts parallelism and reduces throughput. In contrast, MatrixFold benefits from abundant system memory, allowing the same degree of parallelism as in shorter sequences, thereby sustaining high efficiency.
 
 % For extremely long sequences, INT8 precision delivers notable speedups over FP16 within MatrixFold. This is because longer sequences correspond to larger matrix dimensions, which fully exploit the high throughput of INT8 OPA instructions. Moreover, in AlphaFold's computation, many GEMMs involve reductions along the sequence dimension. As the reduction dimension $K$ grows with sequence length, the relative impact of array-register data movement diminishes, and overall computational efficiency increases.
 
@@ -110,14 +110,14 @@ Overall, these results demonstrate that the observed speedup trends are closely 
 
 % An interesting finding is the noticeable performance degradation of INT8 precision compared to FP16 for these long sequences. This is because the larger matrix sizes associated with longer sequences necessitate that the quantization operator traverses the matrix before the GEMM operation. This traversal disrupts spatial locality, meaning that the processor is less likely to access memory locations that are physically close to each other, leading to less efficient memory access patterns and a subsequent reduction in speed.
 
-% 在短序列上的评估结果如图X所示。可以看出，当序列长度较短时，FastFold、MatrixFold的FP16精度以及MatrixFold的INT8精度推理的性能差距并不大。FastFold在极短的序列上会有一定的优势，这是因为单NUMA内的72F的并行度会受到限制，而FastFold可以使用GPU的全部并行度。此时如果强行将MatrixFold扩展到多个NUMA上，通信开销会抵消掉并行度提升带来的好处。
+% 在短序列上的评估结果如图X所示。可以看出，当序列长度较短时，FastFold、MatrixFold的FP16精度以及MatrixFold的INT8精度推理的性能差距并不大。FastFold在极短的序列上会有一定的优势，这是因为单NUMA内的920F的并行度会受到限制，而FastFold可以使用GPU的全部并行度。此时如果强行将MatrixFold扩展到多个NUMA上，通信开销会抵消掉并行度提升带来的好处。
 
 % 在极长序列上的评估结果如表~\ref{tab:inference_ex_long}所示。对比结果如图~\ref{fig:endtoend}所示。可以看出，在极长序列上，MatrixFold的性能远超过了FastFold。当序列长度达到4096时，MatrixFold在FP16精度下实现了3.2倍的加速比。这是因为CPU平台的内存容量远大于A800的显存容量，因此FastFold只能将chunk size设置的很小，而这会影响FastFold的并行度，进而影响推理性能。而对于MatrixFold，由于内存足够支持极长序列的推理，我们可以使用与其它序列一致的并行度。可以看出在极长序列下INT8相比于FP16也会有明显的速度降低，且序列越长，INT8效果越差。这是因为当序列长度足够长时，矩阵规模更大，而在进行GEMM之前的量化算子需要遍历整个矩阵，这破坏了空间局部性。
 % We first evaluate the end-to-end inference performance of AlphaFold2 across different implementations and numerical precisions. The benchmark is conducted on the CASP14~\cite{casp14} dataset, which serves as a representative workload for large-scale protein structure prediction. We compare four variants: the baseline FP32 implementation on CPUs, the FP16 and INT8 quantized versions optimized for matrix units, and FastFold running on a single NVIDIA A800 GPU.
 
 % Fig. [X] reports the average inference time per sequence for each method. The results clearly show that quantization provides significant performance benefits on the CPU platform. In particular, the INT8 implementation achieves the highest speedup, outperforming the FP32 baseline by a substantial margin and even approaching, or in some cases surpassing, the performance of FastFold on the A800 GPU. The FP16 implementation also demonstrates notable acceleration over FP32, although the gains are less pronounced than INT8.
 
-% Notably, on X\% of CASP14 inputs, the INT8 implementation running on a single 72F processor achieves shorter inference time than FastFold on an A800 GPU, with an average speedup of Y× over the FP32 CPU baseline.
+% Notably, on X\% of CASP14 inputs, the INT8 implementation running on a single 920F processor achieves shorter inference time than FastFold on an A800 GPU, with an average speedup of Y× over the FP32 CPU baseline.
 
 % These findings highlight the effectiveness of our quantization and matrix-unit optimizations in narrowing the performance gap between CPU and GPU platforms. By combining low-precision computation with NUMA-aware execution, our optimized CPU implementation enables end-to-end inference throughput that makes CPU-based deployment of AlphaFold2 highly competitive.
 % \begin{figure}[t]
@@ -148,7 +148,7 @@ Overall, these results demonstrate that the observed speedup trends are closely 
 % \subsection{Attention Kernel Performance}
 % To better understand the performance gains at the operator level, we conduct a detailed evaluation of the attention kernel, one of the most computationally demanding components of AlphaFold2's Evoformer module. We benchmark the kernel across a series of representative input shapes that reflect typical multiple sequence alignment (MSA) lengths and residue counts in CASP14.
 
-% Fig. [Y] presents the measured execution times for FP32, FP16, and INT8 attention kernels on the 72F CPU platform. The results indicate that INT8 consistently achieves the lowest runtime across all tested input sizes, benefiting from both reduced arithmetic cost and lower memory bandwidth requirements. FP16 also provides clear improvements compared to FP32, though its advantage diminishes for smaller problem sizes where memory overhead dominates.
+% Fig. [Y] presents the measured execution times for FP32, FP16, and INT8 attention kernels on the 920F CPU platform. The results indicate that INT8 consistently achieves the lowest runtime across all tested input sizes, benefiting from both reduced arithmetic cost and lower memory bandwidth requirements. FP16 also provides clear improvements compared to FP32, though its advantage diminishes for smaller problem sizes where memory overhead dominates.
 
 % These results confirm that quantization directly accelerates the most critical kernel in AlphaFold2, which in turn translates into substantial end-to-end performance improvements. Moreover, the consistent scalability of INT8 attention kernels across diverse input shapes demonstrates the robustness of our optimization approach to real-world protein sequence variability.
 
@@ -201,10 +201,10 @@ In addition, MatrixFold attains higher TM-scores than FastFold and Open-Omics-Al
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/scale.pdf}
-    \caption{Scalability of MatrixFold on a single 72F processor under varying NUMA parallelism and sequence lengths.}
+    \caption{Scalability of MatrixFold on a single 920F processor under varying NUMA parallelism and sequence lengths.}
     \label{fig:scala}
 \end{figure*}
-To further assess the scalability of MatrixFold, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 72F processor, while varying the input sequence length. We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
+To further assess the scalability of MatrixFold, we evaluate the end-to-end inference performance under varying degrees of NUMA parallelism. Specifically, we measure the runtime of AlphaFold2 using 1, 2, 4, and 8 NUMA nodes on a single 920F processor, while varying the input sequence length. We use the sequence length from 512 to 1576 to cover a broad range of practical workloads.
 
 Fig.~\ref{fig:scala} presents the scalability curves. When sequence lengths are large, we observe that the inference time decreases with the number of NUMA nodes increasing, indicating good parallel efficiency of our implementation.
 % 从图中可以得出，随着序列长度的增加，我们可以观测到FP16与INT8的性能由接近开始变为FP16优于INT8。这里的原因与~\ref{sec:end_to_end}中提到的一致，当序列长度增加时，矩阵规模变大，而在进行GEMM之前的量化算子需要遍历整个矩阵，这破坏了空间局部性。

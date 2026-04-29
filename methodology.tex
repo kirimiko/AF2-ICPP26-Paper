@@ -5,7 +5,7 @@
 \subsection{OPA-aware GEMM}
 
 
-% 对于int8与fp16精度的OPA指令，72F要求输入寄存器内的向量是交织的。如果在寄存器中将标准row-major的矩阵进行重排，需要插入大量的寄存器操作指令。在72F上，单条数据排布指令与单条OPA指令的延迟类似，且难以与OPA指令重叠。这些指令会极大程度上拖慢OPA指令的执行速度。为了避免这种情况，我们设计了一个新的矩阵数据格式，称为Interleaved Matrix Format (IMF)。IMF将矩阵的行元素交织存储，使得每个向量寄存器中的元素可以直接用于OPA指令，而无需额外的重排操作。通过将GEMM的kernel设计为可以接收与输出IMF格式，我们可以避免大量的数据排布开销，而仅仅需要在算子入口处进行一次数据格式转换。
+% 对于int8与fp16精度的OPA指令，920F要求输入寄存器内的向量是交织的。如果在寄存器中将标准row-major的矩阵进行重排，需要插入大量的寄存器操作指令。在920F上，单条数据排布指令与单条OPA指令的延迟类似，且难以与OPA指令重叠。这些指令会极大程度上拖慢OPA指令的执行速度。为了避免这种情况，我们设计了一个新的矩阵数据格式，称为Interleaved Matrix Format (IMF)。IMF将矩阵的行元素交织存储，使得每个向量寄存器中的元素可以直接用于OPA指令，而无需额外的重排操作。通过将GEMM的kernel设计为可以接收与输出IMF格式，我们可以避免大量的数据排布开销，而仅仅需要在算子入口处进行一次数据格式转换。
 \textbf{Tensor Layout Optimization.}
 One of the key challenges in exploiting the OPA instructions is their requirement for a specialized input data layout. Unlike conventional GEMM implementations~\cite{goto2008anatomy,vanzee2015blis,alaejos2023microkernels} that operate on row-major or column-major matrices, OPA instructions mandate a custom format for operand loading and accumulation.
 For row-major matrices, the OPA instruction requires matrix A in GEMM to be read in a column-oriented manner. This necessitates block-wise transposition and interleaving prior to OPA execution.
@@ -72,7 +72,7 @@ In AlphaFold2, GEMMs typically involve small $K$ dimensions (a.k.a., \textit{tal
 
 Our empirical evaluation shows that kernel designs that leverage multiple accumulators simultaneously can better saturate the OPA pipelines. In particular, using more than half of ZA registers achieves near-peak instruction throughput. Based on this observation, our kernel design utilizes all available ZA registers for accumulation, ensuring maximal throughput across different precision settings.
 
-% Furthermore, the 72F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-tiling, memory access is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2's typical workloads.
+% Furthermore, the 920F architecture provides high-speed on-package memory, which alleviates memory latency and bandwidth pressure. As a result, even without K-tiling, memory access is maintained at an acceptable level, ensuring efficient data access for GEMM operations. Overall, our GEMM kernel design leverages a single-step K reduction strategy, achieving an optimal balance between OPA instruction throughput and memory efficiency for AlphaFold2's typical workloads.
 
 \subsection{Mixed Precision Strategy}
 
@@ -93,7 +93,7 @@ Similarly, the Softmax function is known to be susceptible to numerical instabil
 % \subsection{Multiple Processes on Multi-NUMA Nodes}
 \subsection{Adaptive Numa-aware Parallelism}
 To further improve scalability within a single compute node, where memory placement and interconnect contention are well-known bottlenecks on multi-NUMA systems~\cite{majo2011numa}, we designed a set of communication interfaces that exploit shared memory. Unlike inter-node communication, processes on the same NUMA domain can exchange intermediate results directly through shared memory buffers, thereby avoiding redundant data copies.
-This communication mechanism is built on top of the memory movement unit available on the 72F platform. By leveraging the memory movement unit, processes can offload data transfer from the CPU to the memory subsystem, reducing overhead and improving concurrency between computation and communication.
+This communication mechanism is built on top of the memory movement unit available on the 920F platform. By leveraging the memory movement unit, processes can offload data transfer from the CPU to the memory subsystem, reducing overhead and improving concurrency between computation and communication.
 
 % The shared-memory interfaces are designed to support collective operations commonly required in AlphaFold-style workloads, such as all-to-all and broadcast. 
 %Preliminary evaluation shows that this design significantly reduces intra-node communication latency and achieves near-linear scaling when the number of processes increases within a single NUMA node.
@@ -109,7 +109,7 @@ This communication mechanism is built on top of the memory movement unit availab
 % \end{itemize}
 
 
-% This adaptive parallelism mechanism allows our implementation to efficiently utilize the many-core 72F architecture while avoiding the pitfalls of fixed thread allocation, ensuring that both short and long sequences achieve high throughput with minimal communication and synchronization overhead.
+% This adaptive parallelism mechanism allows our implementation to efficiently utilize the many-core 920F architecture while avoiding the pitfalls of fixed thread allocation, ensuring that both short and long sequences achieve high throughput with minimal communication and synchronization overhead.
 Moreover, the key challenge in optimizing AlphaFold2 on many-core CPUs arises from the variable length of protein sequences. In AlphaFold2, parallelism is mainly exposed across sequences in a batch. When sequences are short, the available parallelism is often small, making it difficult to efficiently utilize all cores of a many-core CPU. Excessive parallelization in such cases leads to very small per-thread workloads, frequent synchronization, and expensive cross-NUMA communication.
 
 To address this issue, we adopt a sequence-length-aware parallelization strategy. Specifically, we partition the batch dimension and the
@@ -117,4 +117,4 @@ M-dimension of the $Q\times K^T$ computation in Attention according to the seque
 
 If the total number of blocks does not exceed the thread capacity of a single NUMA node, execution is confined to that node to avoid cross-node communication. Otherwise, the batch dimension is distributed across multiple NUMA nodes, while the M-dimension is partitioned only within each node. This design ensures that inter-node communication is avoided and that threads within each NUMA node operate on independent blocks.
 
-This adaptive strategy allows the implementation to scale with sequence length while maintaining sufficiently large per-thread workloads with minimum synchronization and NUMA communication overhead on the 72F many-core architecture.
+This adaptive strategy allows the implementation to scale with sequence length while maintaining sufficiently large per-thread workloads with minimum synchronization and NUMA communication overhead on the 920F many-core architecture.
